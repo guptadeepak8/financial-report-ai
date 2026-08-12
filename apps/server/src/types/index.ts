@@ -1,3 +1,4 @@
+
 export interface Report {
   company: Company;
 
