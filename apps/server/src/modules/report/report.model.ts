@@ -6,12 +6,10 @@ const datasetSchema = new Schema(
       type: String,
       required: true,
     },
-
     data: {
       type: [Number],
       required: true,
     },
-
     color: {
       type: String,
     },
@@ -308,11 +306,58 @@ const reportMetadataSchema = new Schema(
   },
 );
 
+
+const reportStatusSchema = new Schema(
+  {
+    status: {
+      type: String,
+      enum: [
+        "queued",
+        "extracting",
+        "analyzing",
+        "report_generated",
+        "pdf_generating",
+        "completed",
+        "failed",
+      ],
+      default: "queued",
+      required: true,
+    },
+
+    currentStep: {
+      type: String,
+      required: true,
+      default: "Queued",
+    },
+
+    errorMessage: {
+      type: String,
+    },
+  },
+  {
+    _id: false,
+  },
+);
+
 const reportSchema = new Schema(
   {
+    companyName: {
+      type: String,
+      required: true,
+    },
+
+    originalFileName: {
+      type: String,
+      required: true,
+    },
+
+    status: {
+      type: reportStatusSchema,
+      required: true,
+    },
+
     company: {
       type: companySchema,
-      required: true,
     },
 
     recommendation: {
@@ -321,7 +366,6 @@ const reportSchema = new Schema(
 
     summary: {
       type: summarySchema,
-      required: true,
     },
 
     companyData: {
@@ -345,7 +389,6 @@ const reportSchema = new Schema(
 
     metadata: {
       type: reportMetadataSchema,
-      required: true,
     },
   },
   {

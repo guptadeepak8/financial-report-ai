@@ -67,11 +67,7 @@ export const tableColumnSchema = z.object({
 
 export const tableRowSchema = z.object({
   label: z.string(),
-  values: z.array(z.union([
-    z.string(),
-    z.number(),
-    z.null(),
-  ])),
+  values: z.array(z.union([z.string(), z.number(), z.null()])),
 });
 
 export const financialTableSchema = z.object({
@@ -104,13 +100,7 @@ export const datasetSchema = z.object({
 export const chartSchema = z.object({
   id: z.string(),
   title: z.string(),
-  type: z.enum([
-    "line",
-    "bar",
-    "pie",
-    "doughnut",
-    "area",
-  ]),
+  type: z.enum(["line", "bar", "pie", "doughnut", "area"]),
   labels: z.array(z.string()),
   datasets: z.array(datasetSchema),
 });
@@ -122,21 +112,24 @@ export const reportMetadataSchema = z.object({
   version: z.string(),
 });
 
+export const aiReportSchema = z.object({
+  company: companySchema,
+  recommendation: recommendationSchema.nullable(),
+  summary: summarySchema,
+  companyData: companyDataSchema.nullable(),
+  sections: z.array(sectionSchema),
+  tables: z.array(financialTableSchema),
+  charts: z.array(chartSchema),
+});
+
 export const reportSchema = z.object({
   company: companySchema,
-
   recommendation: recommendationSchema.nullable(),
-
   summary: summarySchema,
-
   companyData: companyDataSchema.nullable(),
-
   sections: z.array(sectionSchema),
-
   tables: z.array(financialTableSchema),
-
   charts: z.array(chartSchema),
-
   metadata: reportMetadataSchema,
 });
 
@@ -151,3 +144,4 @@ export type Chart = z.infer<typeof chartSchema>;
 export type Dataset = z.infer<typeof datasetSchema>;
 export type ReportMetadata = z.infer<typeof reportMetadataSchema>;
 export type Report = z.infer<typeof reportSchema>;
+export type AIReport = z.infer<typeof aiReportSchema>;
