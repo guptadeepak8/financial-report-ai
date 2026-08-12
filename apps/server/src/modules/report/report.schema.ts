@@ -133,6 +133,16 @@ export const reportSchema = z.object({
   metadata: reportMetadataSchema,
 });
 
+export const reportStatusSchema = z.enum([
+  "queued",
+  "extracting",
+  "analyzing",
+  "report_generated",
+  "pdf_generating",
+  "completed",
+  "failed",
+]);
+
 export type Company = z.infer<typeof companySchema>;
 export type Recommendation = z.infer<typeof recommendationSchema>;
 export type Summary = z.infer<typeof summarySchema>;
@@ -145,3 +155,4 @@ export type Dataset = z.infer<typeof datasetSchema>;
 export type ReportMetadata = z.infer<typeof reportMetadataSchema>;
 export type Report = z.infer<typeof reportSchema>;
 export type AIReport = z.infer<typeof aiReportSchema>;
+export type ReportStatus =z.infer<typeof reportStatusSchema>;

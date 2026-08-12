@@ -11,12 +11,13 @@ import { buildReportPrompt } from "./report.prompt";
 import {
   createReport,
   findReportById,
-  markReportFailed,
   updateReportData,
-  updateReportProgress,
+  updateReportPdfPath,
+  updateReportStatus,
 } from "./report.repository";
 
 import { aiReportSchema, type Report } from "./report.schema";
+import { generateReportPdf } from "./pdf/report-pdf.service";
 
 export async function extractReport(
   documentText: string,
@@ -115,19 +116,17 @@ export async function processReport(
   originalFileName: string,
 ) {
   try {
-    await updateReportProgress(
+    await updateReportStatus(
       reportId,
       "extracting",
-      20,
-      "Extracting financial information",
+      "Reading financial document",
     );
 
     const document = await parseDocument(filePath, originalFileName);
 
-    await updateReportProgress(
+    await updateReportStatus(
       reportId,
       "analyzing",
-      45,
       "Analyzing financial information with AI",
     );
 
@@ -137,10 +136,9 @@ export async function processReport(
       document.fileType,
     );
 
-    await updateReportProgress(
+    await updateReportStatus(
       reportId,
       "report_generated",
-      70,
       "Financial research report generated",
     );
 
@@ -162,21 +160,32 @@ export async function processReport(
       metadata: report.metadata,
     });
 
-    await updateReportProgress(
+    await updateReportStatus(
       reportId,
       "pdf_generating",
-      90,
       "Generating PDF report",
     );
 
-    // PDF generation comes next.
+    // PDF generation will go here.
+    //
+    const pdfPath =await generateReportPdf(
+    report,
+    reportId,
+    );
 
-    await updateReportProgress(reportId, "completed", 100, "Report ready");
+    await updateReportPdfPath(
+      reportId,
+      pdfPath,
+    );
+
+    await updateReportStatus(reportId, "completed", "Report ready");
   } catch (error) {
     console.error(`Report ${reportId} processing failed:`, error);
 
-    await markReportFailed(
+    await updateReportStatus(
       reportId,
+      "failed",
+      "Report generation failed",
       error instanceof Error ? error.message : "Unknown error",
     );
   }

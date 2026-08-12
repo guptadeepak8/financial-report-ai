@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
-
+import fs from "node:fs/promises";
+import path from "node:path";
 import { AppError } from "../../utils/app-error";
 
 import {
@@ -9,8 +10,6 @@ import {
 } from "./report.service";
 
 export async function createReport(req: Request, res: Response): Promise<void> {
-    console.log("BODY:", req.body);
-  console.log("FILE:", req.file);
   const companyName = req.body.companyName;
 
   if (typeof companyName !== "string" || !companyName.trim()) {
@@ -65,4 +64,43 @@ export async function getReport(req: Request, res: Response): Promise<void> {
 
     data: report,
   });
+}
+
+export async function downloadReport(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const reportId = req.params.id;
+
+  if (!reportId) {
+    throw new AppError("Report ID is required", 400, "REPORT_ID_REQUIRED");
+  }
+
+  const report = await getReportById(reportId);
+
+  if (!report) {
+    throw new AppError("Report not found", 404, "REPORT_NOT_FOUND");
+  }
+
+  if (report.status.status !== "completed") {
+    throw new AppError("Report is not ready yet", 409, "REPORT_NOT_READY");
+  }
+
+  if (!report.pdfPath) {
+    throw new AppError("Generated PDF not found", 404, "PDF_NOT_FOUND");
+  }
+
+  const pdfPath = path.resolve(report.pdfPath);
+
+  try {
+    await fs.access(pdfPath);
+  } catch {
+    throw new AppError(
+      "Generated PDF file does not exist",
+      404,
+      "PDF_FILE_NOT_FOUND",
+    );
+  }
+
+  res.download(pdfPath, `${report.companyName}-research-report.pdf`);
 }

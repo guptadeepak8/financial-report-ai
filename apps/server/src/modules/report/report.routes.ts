@@ -1,9 +1,10 @@
 import { Router } from "express";
 import multer from "multer";
 
-import { createReport, getReport } from "./report.controller";
+import { createReport, downloadReport, getReport } from "./report.controller";
+import { reportEvents } from "./report.sse";
 
-import { reportEvents } from "./report.events";
+
 
 const router:Router = Router();
 
@@ -19,6 +20,7 @@ router.post("/", upload.single("file"), createReport);
 
 router.get("/:id/events", reportEvents);
 
+router.get("/:id/pdf",downloadReport);
 router.get("/:id", getReport);
 
 export default router;

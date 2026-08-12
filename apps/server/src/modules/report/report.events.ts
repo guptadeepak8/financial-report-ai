@@ -1,92 +1,34 @@
-import type { Request, Response } from "express";
+import { EventEmitter } from "node:events";
 
-import { getReportById } from "./report.service";
+import type { ReportStatus } from "./report.schema";
 
-function sendEvent(res: Response, event: string, data: unknown) {
-  res.write(`event: ${event}\n` + `data: ${JSON.stringify(data)}\n\n`);
+export interface ReportStatusEvent {
+  reportId: string;
+
+  status: ReportStatus;
+
+  currentStep: string;
+
+  errorMessage?: string | null;
 }
 
-export async function reportEvents(req: Request, res: Response): Promise<void> {
-  const reportId = req.params.id;
+const reportEventEmitter = new EventEmitter();
 
-  res.setHeader("Content-Type", "text/event-stream");
+reportEventEmitter.setMaxListeners(1000);
 
-  res.setHeader("Cache-Control", "no-cache, no-transform");
+export function emitReportStatus(event: ReportStatusEvent): void {
+  reportEventEmitter.emit(`report:${event.reportId}`, event);
+}
 
-  res.setHeader("Connection", "keep-alive");
+export function subscribeToReport(
+  reportId: string,
+  listener: (event: ReportStatusEvent) => void,
+): () => void {
+  const eventName = `report:${reportId}`;
 
-  res.setHeader("X-Accel-Buffering", "no");
+  reportEventEmitter.on(eventName, listener);
 
-  res.flushHeaders();
-
-  let closed = false;
-
-  const sendProgress = async () => {
-    if (closed) {
-      return;
-    }
-
-    try {
-      const report = await getReportById(reportId);
-
-      if (!report) {
-        sendEvent(res, "error", {
-          message: "Report not found",
-        });
-
-        res.end();
-
-        return;
-      }
-
-      sendEvent(res, "progress", {
-        reportId: report.id,
-
-        status: report.status.status,
-
-        progress: report.status.progress,
-
-        currentStep: report.status.currentStep,
-      });
-
-      if (
-        report.status.status === "completed" ||
-        report.status.status === "failed"
-      ) {
-        sendEvent(res, report.status.status, {
-          reportId: report.id,
-
-          status: report.status.status,
-
-          progress: report.status.progress,
-
-          currentStep: report.status.currentStep,
-
-          errorMessage: report.status.errorMessage ?? null,
-        });
-
-        res.end();
-      }
-    } catch (error) {
-      console.error("SSE error:", error);
-
-      sendEvent(res, "error", {
-        message: "Failed to retrieve report progress",
-      });
-
-      res.end();
-    }
+  return () => {
+    reportEventEmitter.off(eventName, listener);
   };
-
-  await sendProgress();
-
-  const interval = setInterval(() => {
-    void sendProgress();
-  }, 1000);
-
-  req.on("close", () => {
-    closed = true;
-
-    clearInterval(interval);
-  });
 }

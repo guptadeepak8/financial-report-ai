@@ -1,28 +1,16 @@
 import { ReportModel } from "./report.model";
 
-export type ReportStatus =
-  | "queued"
-  | "extracting"
-  | "analyzing"
-  | "report_generated"
-  | "pdf_generating"
-  | "completed"
-  | "failed";
-
+import { emitReportStatus, type ReportStatusEvent } from "./report.events";
+import type {ReportStatus} from "./report.schema";
 export async function createReport(data: {
   companyName: string;
   originalFileName: string;
 }) {
   return ReportModel.create({
     companyName: data.companyName,
-
     originalFileName: data.originalFileName,
-
     status: {
       status: "queued",
-
-      progress: 0,
-
       currentStep: "Queued",
     },
   });
@@ -36,39 +24,57 @@ export async function updateReportStatus(
   reportId: string,
   status: ReportStatus,
   currentStep: string,
+  errorMessage?: string,
 ) {
-  return ReportModel.findByIdAndUpdate(
+  const report = await ReportModel.findByIdAndUpdate(
     reportId,
     {
       $set: {
         "status.status": status,
         "status.currentStep": currentStep,
+        ...(errorMessage
+          ? {
+              "status.errorMessage": errorMessage,
+            }
+          : {}),
       },
     },
+
     {
       returnDocument: "after",
     },
   ).lean();
-}
 
+  if (!report) {
+    return null;
+  }
+
+  const event: ReportStatusEvent = {
+    reportId,
+    status,
+    currentStep,
+    ...(errorMessage
+      ? {
+          errorMessage,
+        }
+      : {}),
+  };
+
+  emitReportStatus(event);
+
+  return report;
+}
 
 export async function updateReportData(
   reportId: string,
   data: {
     company: unknown;
-
     recommendation: unknown;
-
     summary: unknown;
-
     companyData: unknown;
-
     sections: unknown[];
-
     tables: unknown[];
-
     charts: unknown[];
-
     metadata: unknown;
   },
 ) {
@@ -77,26 +83,26 @@ export async function updateReportData(
     {
       $set: data,
     },
+
     {
-     returnDocument: "after",
+      returnDocument: "after",
     },
   ).lean();
 }
 
-export async function markReportFailed(reportId: string, errorMessage: string) {
+export async function updateReportPdfPath(
+  reportId: string,
+  pdfPath: string,
+) {
   return ReportModel.findByIdAndUpdate(
     reportId,
     {
       $set: {
-        "status.status": "failed",
-
-        "status.currentStep": "Report generation failed",
-
-        "status.errorMessage": errorMessage,
+        pdfPath,
       },
     },
     {
-     returnDocument: "after",
+      returnDocument: "after",
     },
   ).lean();
 }

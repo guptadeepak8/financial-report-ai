@@ -250,7 +250,6 @@ const summarySchema = new Schema(
 const companyDataSchema = new Schema(
   {
     marketCap: Number,
-
     enterpriseValue: Number,
 
     outstandingShares: Number,
@@ -305,7 +304,6 @@ const reportMetadataSchema = new Schema(
     _id: false,
   },
 );
-
 
 const reportStatusSchema = new Schema(
   {
@@ -386,7 +384,9 @@ const reportSchema = new Schema(
       type: [chartSchema],
       default: [],
     },
-
+    pdfPath: {
+      type: String,
+    },
     metadata: {
       type: reportMetadataSchema,
     },
