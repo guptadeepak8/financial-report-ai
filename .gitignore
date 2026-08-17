@@ -29,3 +29,6 @@ Thumbs.db
 
 # Misc
 *.tsbuildinfo
+# Runtime generated/user-uploaded files
+apps/server/uploads/
+apps/server/generated-reports/
