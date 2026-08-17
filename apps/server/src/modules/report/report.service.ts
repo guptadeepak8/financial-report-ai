@@ -144,19 +144,12 @@ export async function processReport(
 
     await updateReportData(reportId, {
       company: report.company,
-
       recommendation: report.recommendation,
-
       summary: report.summary,
-
       companyData: report.companyData,
-
       sections: report.sections,
-
       tables: report.tables,
-
       charts: report.charts,
-
       metadata: report.metadata,
     });
 
@@ -166,8 +159,8 @@ export async function processReport(
       "Generating PDF report",
     );
 
-    // PDF generation will go here.
-    //
+    // PDF generation.
+
     const pdfPath =await generateReportPdf(
     report,
     reportId,

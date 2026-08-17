@@ -69,6 +69,40 @@ RULES:
 22. The output represents the supplied document and
     not general knowledge about the company.
 
+23. TABLE COMPLETENESS: If the source document contains
+    data for any of the following table categories, you
+    MUST extract that table. Do not omit a table just
+    because you judge it less important — extraction
+    completeness matters more than brevity:
+
+    - income-statement (revenue, costs, EBITDA, EBIT,
+      net income, and all margin rows the source
+      provides, e.g. Gross Margin, EBITDA Margin,
+      EBIT Margin, Net Income Margin)
+    - balance-sheet (assets, liabilities, equity)
+    - cash-flow (operating cash flow, capex, free
+      cash flow)
+    - segment-revenue (revenue by business segment
+      or vertical)
+    - geography or client-mix tables, if the source
+      breaks down revenue by region, project type,
+      or client concentration
+
+    Only skip a category if the source document
+    genuinely contains no data for it. Do not
+    selectively extract a subset of rows within
+    a table category if more rows are available in
+    the source — e.g. if the source's income statement
+    includes Gross Margin, EBITDA Margin, EBIT Margin,
+    AND Net Income Margin, extract all four rows, not
+    a partial selection.
+
+24. CONSISTENCY: Given the same source document, your
+    extraction should be deterministic — the same
+    tables, rows, and sections should be extracted
+    every time. Do not vary which tables or rows you
+    include across runs on identical input.
+
 SOURCE DOCUMENT:
 
 ${documentText}
