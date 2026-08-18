@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { ReportStatus } from "@/lib/reports-api";
 
 interface ReportProgressProps {
@@ -19,14 +18,7 @@ const steps: Array<{ status: ReportStatus; code: string; label: string }> = [
 ];
 
 export function ReportProgress({ status, isConnected, companyName }: ReportProgressProps) {
-  const [caseRef] = useState(() => {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-    return `REF-${y}${m}${day}-${rand}`;
-  });
+
 
   const hasStarted = status !== null;
   const currentIndex = hasStarted ? steps.findIndex((s) => s.status === status) : -1;
@@ -34,7 +26,7 @@ export function ReportProgress({ status, isConnected, companyName }: ReportProgr
   return (
     <aside className="h-fit rounded-2xl border border-[var(--rule)] bg-white p-6 lg:sticky lg:top-10">
       <p className="font-mono-label text-[10px] uppercase tracking-[0.14em] text-[var(--muted)]">
-        Case file · {caseRef}
+        Case file 
       </p>
       <h2 className="font-display mt-1.5 truncate text-xl text-[var(--ink)]">
         {companyName || "Untitled company"}
