@@ -1,11 +1,7 @@
 import { z } from "zod";
-
 import { gemini, getAvailableGeminiModel } from "../../lib/gemini";
-
 import { AppError } from "../../utils/app-error";
-
 import { parseDocument } from "../documents/document.service";
-
 import { buildReportPrompt } from "./report.prompt";
 
 import {
@@ -34,7 +30,6 @@ export async function extractReport(
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-
         responseJsonSchema: z.toJSONSchema(aiReportSchema),
       },
     });
@@ -161,15 +156,9 @@ export async function processReport(
 
     // PDF generation.
 
-    const pdfPath =await generateReportPdf(
-    report,
-    reportId,
-    );
+    const pdfPath = await generateReportPdf(report, reportId);
 
-    await updateReportPdfPath(
-      reportId,
-      pdfPath,
-    );
+    await updateReportPdfPath(reportId, pdfPath);
 
     await updateReportStatus(reportId, "completed", "Report ready");
   } catch (error) {

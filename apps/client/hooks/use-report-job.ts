@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   createReport,
@@ -34,262 +29,160 @@ const initialState: ReportJobState = {
 };
 
 export function useReportJob() {
-  const [state, setState] =
-    useState(initialState);
+  const [state, setState] = useState(initialState);
 
-  const eventSourceRef =
-    useRef<EventSource | null>(
-      null,
-    );
+  const eventSourceRef = useRef<EventSource | null>(null);
 
-  const closeConnection =
-    useCallback(() => {
-      eventSourceRef.current?.close();
+  const closeConnection = useCallback(() => {
+    eventSourceRef.current?.close();
+    eventSourceRef.current = null;
+    setState((current) => ({
+      ...current,
+      isConnected: false,
+    }));
+  }, []);
 
-      eventSourceRef.current = null;
+  const applyStatus = useCallback((event: ReportStatusEvent) => {
+    setState((current) => ({
+      ...current,
+      reportId: event.reportId,
+      status: event.status,
+      currentStep: event.currentStep,
+      errorMessage: event.errorMessage ?? null,
+      isSubmitting: false,
+    }));
+  }, []);
 
-      setState((current) => ({
-        ...current,
-        isConnected: false,
-      }));
-    }, []);
+  const connectToReport = useCallback(
+    async (reportId: string) => {
+      closeConnection();
+      try {
+        const response = await getReport(reportId);
+        applyStatus({
+          reportId,
+          status: response.data.status.status,
+          currentStep: response.data.status.currentStep,
+          errorMessage: response.data.status.errorMessage,
+        });
 
-  const applyStatus =
-    useCallback(
-      (event: ReportStatusEvent) => {
+        if (
+          response.data.status.status === "completed" ||
+          response.data.status.status === "failed"
+        ) {
+          return;
+        }
+      } catch (error) {
+        setState((current) => ({
+          ...current,
+          errorMessage:
+            error instanceof Error
+              ? error.message
+              : "Failed to retrieve report",
+        }));
+        return;
+      }
+
+      const source = new EventSource(getReportEventsUrl(reportId));
+
+      eventSourceRef.current = source;
+
+      source.onopen = () => {
+        setState((current) => ({
+          ...current,
+          isConnected: true,
+        }));
+      };
+
+      source.addEventListener("progress", (event) => {
+        const data = JSON.parse(event.data) as ReportStatusEvent;
+        applyStatus(data);
+      });
+
+      source.addEventListener("completed", (event) => {
+        const data = JSON.parse(event.data) as ReportStatusEvent;
+        applyStatus(data);
+        source.close();
+        eventSourceRef.current = null;
+        setState((current) => ({
+          ...current,
+          isConnected: false,
+        }));
+      });
+
+      source.addEventListener("failed", (event) => {
+        const data = JSON.parse(event.data) as ReportStatusEvent;
+
+        applyStatus(data);
+
+        source.close();
+
+        eventSourceRef.current = null;
+
+        setState((current) => ({
+          ...current,
+          isConnected: false,
+        }));
+      });
+
+      source.onerror = () => {
+        /*
+         * Do NOT mark the report as failed.
+         *
+         * EventSource will try to reconnect.
+         */
+        setState((current) => ({
+          ...current,
+          isConnected: false,
+        }));
+      };
+    },
+    [applyStatus, closeConnection],
+  );
+
+  const startReport = useCallback(
+    async (companyName: string, file: File) => {
+      closeConnection();
+
+      setState({
+        ...initialState,
+        isSubmitting: true,
+      });
+
+      try {
+        const response = await createReport(companyName, file);
+
+        const reportId = response.data.reportId;
+
         setState((current) => ({
           ...current,
 
-          reportId:
-            event.reportId,
+          reportId,
 
-          status:
-            event.status,
+          status: response.data.status,
 
-          currentStep:
-            event.currentStep,
-
-          errorMessage:
-            event.errorMessage ??
-            null,
+          currentStep: "Queued",
 
           isSubmitting: false,
         }));
-      },
-      [],
-    );
 
-  const connectToReport =
-    useCallback(
-      async (reportId: string) => {
-        closeConnection();
+        await connectToReport(reportId);
 
-        /*
-         * Recover the persisted state first.
-         *
-         * This protects us if:
-         *
-         * - the browser reloads
-         * - SSE connects late
-         * - network temporarily disappears
-         * - report processing already started
-         */
+        return reportId;
+      } catch (error) {
+        setState((current) => ({
+          ...current,
 
-        try {
-          const response =
-            await getReport(
-              reportId,
-            );
+          isSubmitting: false,
 
-          applyStatus({
-            reportId,
-            status:
-              response.data.status
-                .status,
-            currentStep:
-              response.data.status
-                .currentStep,
-            errorMessage:
-              response.data.status
-                .errorMessage,
-          });
+          errorMessage:
+            error instanceof Error ? error.message : "Failed to create report",
+        }));
 
-          if (
-            response.data.status
-              .status ===
-              "completed" ||
-            response.data.status
-              .status ===
-              "failed"
-          ) {
-            return;
-          }
-        } catch (error) {
-          setState((current) => ({
-            ...current,
-
-            errorMessage:
-              error instanceof Error
-                ? error.message
-                : "Failed to retrieve report",
-          }));
-
-          return;
-        }
-
-        const source =
-          new EventSource(
-            getReportEventsUrl(
-              reportId,
-            ),
-          );
-
-        eventSourceRef.current =
-          source;
-
-        source.onopen = () => {
-          setState((current) => ({
-            ...current,
-            isConnected: true,
-          }));
-        };
-
-        source.addEventListener(
-          "progress",
-          (event) => {
-            const data =
-              JSON.parse(
-                event.data,
-              ) as ReportStatusEvent;
-
-            applyStatus(data);
-          },
-        );
-
-        source.addEventListener(
-          "completed",
-          (event) => {
-            const data =
-              JSON.parse(
-                event.data,
-              ) as ReportStatusEvent;
-
-            applyStatus(data);
-
-            source.close();
-
-            eventSourceRef.current =
-              null;
-
-            setState((current) => ({
-              ...current,
-              isConnected: false,
-            }));
-          },
-        );
-
-        source.addEventListener(
-          "failed",
-          (event) => {
-            const data =
-              JSON.parse(
-                event.data,
-              ) as ReportStatusEvent;
-
-            applyStatus(data);
-
-            source.close();
-
-            eventSourceRef.current =
-              null;
-
-            setState((current) => ({
-              ...current,
-              isConnected: false,
-            }));
-          },
-        );
-
-        source.onerror = () => {
-          /*
-           * Do NOT mark the report as failed.
-           *
-           * EventSource will try to reconnect.
-           */
-          setState((current) => ({
-            ...current,
-            isConnected: false,
-          }));
-        };
-      },
-      [
-        applyStatus,
-        closeConnection,
-      ],
-    );
-
-  const startReport =
-    useCallback(
-      async (
-        companyName: string,
-        file: File,
-      ) => {
-        closeConnection();
-
-        setState({
-          ...initialState,
-          isSubmitting: true,
-        });
-
-        try {
-          const response =
-            await createReport(
-              companyName,
-              file,
-            );
-
-          const reportId =
-            response.data.reportId;
-
-          setState((current) => ({
-            ...current,
-
-            reportId,
-
-            status:
-              response.data.status,
-
-            currentStep:
-              "Queued",
-
-            isSubmitting: false,
-          }));
-
-          await connectToReport(
-            reportId,
-          );
-
-          return reportId;
-        } catch (error) {
-          setState((current) => ({
-            ...current,
-
-            isSubmitting: false,
-
-            errorMessage:
-              error instanceof Error
-                ? error.message
-                : "Failed to create report",
-          }));
-
-          return null;
-        }
-      },
-      [
-        closeConnection,
-        connectToReport,
-      ],
-    );
+        return null;
+      }
+    },
+    [closeConnection, connectToReport],
+  );
 
   useEffect(() => {
     return () => {

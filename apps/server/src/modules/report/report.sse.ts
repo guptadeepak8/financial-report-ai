@@ -1,9 +1,6 @@
 import type { Request, Response } from "express";
-
 import { AppError } from "../../utils/app-error";
-
 import { getReportById } from "./report.service";
-
 import { subscribeToReport, type ReportStatusEvent } from "./report.events";
 
 function sendEvent(res: Response, event: string, data: unknown): void {
@@ -12,19 +9,14 @@ function sendEvent(res: Response, event: string, data: unknown): void {
 
 export async function reportEvents(req: Request, res: Response): Promise<void> {
   const reportId = req.params.id;
-
   if (!reportId) {
     throw new AppError("Report ID is required", 400, "REPORT_ID_REQUIRED");
   }
 
   res.setHeader("Content-Type", "text/event-stream");
-
   res.setHeader("Cache-Control", "no-cache, no-transform");
-
   res.setHeader("Connection", "keep-alive");
-
   res.setHeader("X-Accel-Buffering", "no");
-
   res.flushHeaders();
 
   let closed = false;
@@ -38,27 +30,20 @@ export async function reportEvents(req: Request, res: Response): Promise<void> {
 
       sendEvent(res, "progress", {
         reportId: event.reportId,
-
         status: event.status,
-
         currentStep: event.currentStep,
       });
 
       if (event.status === "completed" || event.status === "failed") {
         sendEvent(res, event.status, {
           reportId: event.reportId,
-
           status: event.status,
-
           currentStep: event.currentStep,
-
           errorMessage: event.errorMessage ?? null,
         });
 
         closed = true;
-
         unsubscribe();
-
         res.end();
       }
     },
@@ -69,26 +54,18 @@ export async function reportEvents(req: Request, res: Response): Promise<void> {
 
     if (!report) {
       closed = true;
-
       unsubscribe();
-
       sendEvent(res, "error", {
         message: "Report not found",
       });
-
       res.end();
-
       return;
     }
 
-    // Send the latest persisted state immediately.
-    // This allows the frontend to recover after
-    // a reload or network reconnect.
+    // this sends latest persisted state immediately.
     sendEvent(res, "progress", {
       reportId,
-
       status: report.status.status,
-
       currentStep: report.status.currentStep,
     });
 
@@ -98,41 +75,29 @@ export async function reportEvents(req: Request, res: Response): Promise<void> {
     ) {
       sendEvent(res, report.status.status, {
         reportId,
-
         status: report.status.status,
-
         currentStep: report.status.currentStep,
-
         errorMessage: report.status.errorMessage ?? null,
       });
 
       closed = true;
-
       unsubscribe();
-
       res.end();
-
       return;
     }
   } catch (error) {
     closed = true;
-
     unsubscribe();
-
     console.error("SSE error:", error);
-
     sendEvent(res, "error", {
       message: "Failed to retrieve report status",
     });
-
     res.end();
-
     return;
   }
 
   req.on("close", () => {
     closed = true;
-
     unsubscribe();
   });
 }

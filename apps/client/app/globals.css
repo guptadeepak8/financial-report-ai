@@ -1,5 +1,16 @@
+/* globals.css */
 @import "tailwindcss";
 
+:root {
+  --paper: #f3f4f1;
+  --surface: #ffffff;
+  --ink: #14171c;
+  --ink-navy: #17324e;
+  --rule: #dadfe3;
+  --muted: #62697a;
+  --stamp: #8b2e2e;
+  --stamp-soft: #f6eae8;
+}
 
 * {
   box-sizing: border-box;
@@ -12,11 +23,14 @@ body {
 }
 
 body {
-  background: #f7f8fa;
-  color: #14171c;
-  background-image:
-    radial-gradient(circle at 1px 1px, #e2e5ea 1px, transparent 0);
-  background-size: 28px 28px;
+  background: var(--paper);
+  color: var(--ink);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 27px,
+    #e4e7e3 28px
+  );
 }
 
 .font-display {
@@ -25,4 +39,25 @@ body {
 
 .font-mono-label {
   font-family: "JetBrains Mono", monospace;
+}
+
+@keyframes stage-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stage-enter {
+  animation: stage-in 0.35s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage-enter {
+    animation: none;
+  }
 }

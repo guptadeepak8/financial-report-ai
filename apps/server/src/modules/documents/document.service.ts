@@ -2,10 +2,9 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { parse } from "csv-parse/sync";
-
-import { AppError } from "../../utils/app-error";
 import { PDFParse } from "pdf-parse";
 
+import { AppError } from "../../utils/app-error";
 
 export type DocumentType = "pdf" | "csv" | "txt";
 
@@ -42,11 +41,12 @@ async function parsePdf(buffer: Buffer): Promise<string> {
     data: buffer,
   });
 
-  const result = await parser.getText();
-
-  await parser.destroy();
-
-  return result.text.trim();
+  try {
+    const result = await parser.getText();
+    return result.text.trim();
+  } finally {
+    await parser.destroy();
+  }
 }
 
 function parseCsv(buffer: Buffer): string {
