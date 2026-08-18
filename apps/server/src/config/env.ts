@@ -11,6 +11,7 @@ const requiredEnv = (name: string): string => {
 export const env = {
   NODE_ENV: process.env.NODE_ENV || "development",
   PORT: Number(process.env.PORT) || 5000,
-  MONGODB_URI: requiredEnv("MONGODB_URI"),
+  // MONGODB_URI: requiredEnv("MONGODB_URI"),
   GEMINI_API_KEY: requiredEnv("GEMINI_API_KEY"),
+  CLINET_URL:requiredEnv("CLINET_URL")
 };

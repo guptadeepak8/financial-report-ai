@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
+
 import fs from "node:fs/promises";
 import path from "node:path";
+
 import { AppError } from "../../utils/app-error";
 
 import {
@@ -28,10 +30,7 @@ export async function createReport(req: Request, res: Response): Promise<void> {
     );
   }
 
-  const report = await createReportJob(
-    companyName.trim(),
-    req.file.originalname,
-  );
+  const report = createReportJob(companyName.trim(), req.file.originalname);
 
   void processReport(report.id, req.file.path, req.file.originalname);
 
@@ -40,8 +39,8 @@ export async function createReport(req: Request, res: Response): Promise<void> {
 
     data: {
       reportId: report.id,
-
       status: report.status.status,
+      message: report.status.message,
     },
   });
 }
@@ -53,7 +52,7 @@ export async function getReport(req: Request, res: Response): Promise<void> {
     throw new AppError("Report ID is required", 400, "REPORT_ID_REQUIRED");
   }
 
-  const report = await getReportById(reportId);
+  const report = getReportById(reportId);
 
   if (!report) {
     throw new AppError("Report not found", 404, "REPORT_NOT_FOUND");
@@ -61,8 +60,17 @@ export async function getReport(req: Request, res: Response): Promise<void> {
 
   res.json({
     success: true,
-
-    data: report,
+    data: {
+      reportId: report.id,
+      companyName: report.companyName,
+      status: report.status.status,
+      message: report.status.message,
+      error: report.error,
+      downloadUrl:
+        report.status.status === "completed"
+          ? `/api/v1/reports/${report.id}/download`
+          : undefined,
+    },
   });
 }
 
@@ -76,7 +84,7 @@ export async function downloadReport(
     throw new AppError("Report ID is required", 400, "REPORT_ID_REQUIRED");
   }
 
-  const report = await getReportById(reportId);
+  const report = getReportById(reportId);
 
   if (!report) {
     throw new AppError("Report not found", 404, "REPORT_NOT_FOUND");

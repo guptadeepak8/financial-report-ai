@@ -1,21 +1,26 @@
 import "dotenv/config";
-import app from "./app";
-import { connectDatabase } from "./config/database";
+
+import express, { type Express } from "express";
+import cors from "cors";
+
+import routes from "./routes";
+import { errorMiddleware } from "./middleware/error.middleware";
 import { env } from "./config/env";
 
+const app: Express = express();
 
+app.use(
+  cors({
+    origin: env.CLINET_URL,
+  }),
+);
 
-async function bootstrap() {
-  try {
-    await connectDatabase();
+app.use(express.json());
+app.use("/api/v1", routes);
+app.use(errorMiddleware);
 
-    app.listen(env.PORT, () => {
-      console.log(`Server running on http://localhost:${env.PORT}`);
-    });
-  } catch (error) {
-    console.error("Failed to start server:", error);
-    process.exit(1);
-  }
-}
-
-bootstrap();
+app.listen(env.PORT, () => {
+  console.log(
+    `Server running on http://localhost:${env.PORT}`,
+  );
+});

@@ -66,7 +66,6 @@ export async function reportEvents(req: Request, res: Response): Promise<void> {
     sendEvent(res, "progress", {
       reportId,
       status: report.status.status,
-      currentStep: report.status.currentStep,
     });
 
     if (
@@ -76,7 +75,6 @@ export async function reportEvents(req: Request, res: Response): Promise<void> {
       sendEvent(res, report.status.status, {
         reportId,
         status: report.status.status,
-        currentStep: report.status.currentStep,
         errorMessage: report.status.errorMessage ?? null,
       });
 

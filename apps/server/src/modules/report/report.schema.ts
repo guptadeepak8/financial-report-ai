@@ -73,20 +73,7 @@ export const tableRowSchema = z.object({
 export const financialTableSchema = z.object({
   id: z.string(),
   title: z.string(),
-  category: z.enum([
-    "financial-highlights",
-    "quarterly-results",
-    "income-statement",
-    "balance-sheet",
-    "cash-flow",
-    "ratios",
-    "shareholding",
-    "valuation",
-    "price-performance",
-    "segment-revenue",
-    "estimate-changes",
-    "custom",
-  ]),
+  category: z.string(),
   columns: z.array(tableColumnSchema),
   rows: z.array(tableRowSchema),
 });
@@ -134,7 +121,6 @@ export const reportSchema = z.object({
 });
 
 export const reportStatusSchema = z.enum([
-  "queued",
   "extracting",
   "analyzing",
   "report_generated",
@@ -155,4 +141,4 @@ export type Dataset = z.infer<typeof datasetSchema>;
 export type ReportMetadata = z.infer<typeof reportMetadataSchema>;
 export type Report = z.infer<typeof reportSchema>;
 export type AIReport = z.infer<typeof aiReportSchema>;
-export type ReportStatus =z.infer<typeof reportStatusSchema>;
+export type ReportStatus = z.infer<typeof reportStatusSchema>;

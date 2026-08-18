@@ -1,6 +1,5 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-
 import { chromium } from "playwright";
 
 import type { Report } from "../report.schema";
@@ -10,18 +9,13 @@ export async function generateReportPdf(
   report: Report,
   reportId: string,
 ): Promise<string> {
-  const outputDirectory = path.resolve(
-    "generated-reports",
-  );
+  const outputDirectory = path.resolve("generated-reports");
 
   await fs.mkdir(outputDirectory, {
     recursive: true,
   });
 
-  const outputPath = path.join(
-    outputDirectory,
-    `${reportId}.pdf`,
-  );
+  const outputPath = path.join(outputDirectory, `${reportId}.pdf`);
 
   const browser = await chromium.launch({
     headless: true,
@@ -52,7 +46,6 @@ export async function generateReportPdf(
       printBackground: true,
       preferCSSPageSize: true,
       displayHeaderFooter: false,
-
       margin: {
         top: "10mm",
         right: "11mm",

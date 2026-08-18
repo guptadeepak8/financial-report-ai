@@ -1,108 +1,107 @@
-import { ReportModel } from "./report.model";
+import crypto from "node:crypto";
+import { emitReportStatus } from "./report.events";
 
-import { emitReportStatus, type ReportStatusEvent } from "./report.events";
-import type {ReportStatus} from "./report.schema";
-export async function createReport(data: {
+export type ReportStatus =
+  | "extracting"
+  | "analyzing"
+  | "report_generated"
+  | "pdf_generating"
+  | "completed"
+  | "failed";
+
+export interface ReportRecord {
+  id: string;
   companyName: string;
   originalFileName: string;
-}) {
-  return ReportModel.create({
-    companyName: data.companyName,
-    originalFileName: data.originalFileName,
-    status: {
-      status: "queued",
-      currentStep: "Queued",
-    },
-  });
-}
 
-export async function findReportById(reportId: string) {
-  return ReportModel.findById(reportId).lean();
-}
-
-export async function updateReportStatus(
-  reportId: string,
-  status: ReportStatus,
-  currentStep: string,
-  errorMessage?: string,
-) {
-  const report = await ReportModel.findByIdAndUpdate(
-    reportId,
-    {
-      $set: {
-        "status.status": status,
-        "status.currentStep": currentStep,
-        ...(errorMessage
-          ? {
-              "status.errorMessage": errorMessage,
-            }
-          : {}),
-      },
-    },
-
-    {
-      returnDocument: "after",
-    },
-  ).lean();
-
-  if (!report) {
-    return null;
-  }
-
-  const event: ReportStatusEvent = {
-    reportId,
-    status,
-    currentStep,
-    ...(errorMessage
-      ? {
-          errorMessage,
-        }
-      : {}),
+  status: {
+    status: ReportStatus;
+    message: string;
   };
 
-  emitReportStatus(event);
+  data?: unknown;
+  pdfPath?: string;
+  error?: string;
+}
+
+const reports = new Map<string, ReportRecord>();
+
+export function createReport(
+  companyName: string,
+  originalFileName: string,
+): ReportRecord {
+  const report: ReportRecord = {
+    id: crypto.randomUUID(),
+
+    companyName,
+    originalFileName,
+
+    status: {
+      status: "extracting",
+      message: "Report queued",
+    },
+  };
+
+  reports.set(report.id, report);
 
   return report;
 }
 
-export async function updateReportData(
-  reportId: string,
-  data: {
-    company: unknown;
-    recommendation: unknown;
-    summary: unknown;
-    companyData: unknown;
-    sections: unknown[];
-    tables: unknown[];
-    charts: unknown[];
-    metadata: unknown;
-  },
-) {
-  return ReportModel.findByIdAndUpdate(
-    reportId,
-    {
-      $set: data,
-    },
-
-    {
-      returnDocument: "after",
-    },
-  ).lean();
+export function findReportById(reportId: string): ReportRecord | undefined {
+  return reports.get(reportId);
 }
 
-export async function updateReportPdfPath(
+export function updateReportStatus(
   reportId: string,
-  pdfPath: string,
-) {
-  return ReportModel.findByIdAndUpdate(
+  status: ReportStatus,
+  message: string,
+  error?: string,
+): void {
+  const report = reports.get(reportId);
+
+  if (!report) {
+    throw new Error(`Report ${reportId} not found`);
+  }
+
+  report.status = {
+    status,
+    message,
+  };
+
+  if (error) {
+    report.error = error;
+  }
+
+  reports.set(reportId, report);
+
+   emitReportStatus({
     reportId,
-    {
-      $set: {
-        pdfPath,
-      },
-    },
-    {
-      returnDocument: "after",
-    },
-  ).lean();
+    status,
+    currentStep: message,
+    errorMessage: error ?? null,
+  });
+}
+
+export function updateReportData(reportId: string, data: unknown): void {
+  const report = reports.get(reportId);
+
+  if (!report) {
+    throw new Error(`Report ${reportId} not found`);
+  }
+
+  report.data = data;
+
+  reports.set(reportId, report);
+}
+
+export function updateReportPdfPath(reportId: string, pdfPath: string): void {
+  const report = reports.get(reportId);
+
+  if (!report) {
+    throw new Error(`Report ${reportId} not found`);
+  }
+
+  report.pdfPath = pdfPath;
+
+  reports.set(reportId, report);
 }

@@ -24,8 +24,7 @@ export const reportPdfStyles = `
     line-height: 1.45;
 
     color: #20242a;
-
-    background: white;
+    background: #ffffff;
 
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -36,6 +35,10 @@ export const reportPdfStyles = `
     max-width: 794px;
     margin: 0 auto;
   }
+
+  /*
+   * HEADER
+   */
 
   .report-header {
     border-bottom: 2px solid #1f4e79;
@@ -58,6 +61,11 @@ export const reportPdfStyles = `
     gap: 20px;
   }
 
+  .company-heading {
+    min-width: 0;
+    flex: 1;
+  }
+
   .report-header h1 {
     margin: 0;
     font-size: 21px;
@@ -76,11 +84,13 @@ export const reportPdfStyles = `
     display: flex;
     gap: 16px;
     text-align: right;
+    flex-shrink: 0;
   }
 
   .report-info span,
   .metric span,
-  .recommendation-card span {
+  .recommendation-card span,
+  .kpi-card span {
     display: block;
     color: #727b85;
     font-size: 7px;
@@ -94,6 +104,10 @@ export const reportPdfStyles = `
     font-size: 8px;
     color: #222;
   }
+
+  /*
+   * RECOMMENDATION
+   */
 
   .recommendation-card {
     display: grid;
@@ -135,6 +149,56 @@ export const reportPdfStyles = `
     color: #1f4e79;
   }
 
+  /*
+   * KPI CARDS
+   */
+
+  .kpi-grid {
+    display: grid;
+
+    grid-template-columns:
+      repeat(4, 1fr);
+
+    gap: 7px;
+
+    margin-bottom: 14px;
+  }
+
+  .kpi-card {
+    min-height: 58px;
+
+    padding: 8px 9px;
+
+    border: 1px solid #d1d7dd;
+    border-top: 3px solid #1f4e79;
+
+    background: #f8fafc;
+  }
+
+  .kpi-card strong {
+    display: block;
+
+    margin-top: 4px;
+
+    font-size: 12px;
+
+    color: #1d2733;
+  }
+
+  .kpi-card small {
+    display: block;
+
+    margin-top: 2px;
+
+    color: #858d95;
+
+    font-size: 6.5px;
+  }
+
+  /*
+   * SECTIONS
+   */
+
   .section {
     margin-top: 15px;
     break-inside: avoid;
@@ -156,7 +220,7 @@ export const reportPdfStyles = `
     margin-bottom: 8px;
   }
 
-  .section-title span {
+  .section-number {
     display: inline-flex;
 
     align-items: center;
@@ -166,7 +230,7 @@ export const reportPdfStyles = `
     height: 17px;
 
     background: #1f4e79;
-    color: white;
+    color: #ffffff;
 
     font-size: 7px;
   }
@@ -188,6 +252,10 @@ export const reportPdfStyles = `
 
     color: #404850;
   }
+
+  /*
+   * SUMMARY HIGHLIGHTS
+   */
 
   .highlights {
     display: grid;
@@ -220,6 +288,10 @@ export const reportPdfStyles = `
     border-radius: 50%;
   }
 
+  /*
+   * COMPANY SNAPSHOT
+   */
+
   .metrics-grid {
     display: grid;
 
@@ -251,71 +323,9 @@ export const reportPdfStyles = `
     color: #252b32;
   }
 
-  .table-section {
-    break-inside: auto;
-  }
-
-  .table-wrapper {
-    width: 100%;
-    overflow: hidden;
-  }
-
-  table {
-    width: 100%;
-
-    border-collapse: collapse;
-
-    table-layout: auto;
-
-    font-size: 7.3px;
-  }
-
-  thead {
-    display: table-header-group;
-  }
-
-  tr {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  th {
-    padding: 5px 4px;
-
-    background: #e8edf3;
-
-    border: 1px solid #b9c2cc;
-
-    color: #29323b;
-
-    font-size: 7px;
-    font-weight: 700;
-
-    text-align: center;
-    vertical-align: middle;
-  }
-
-  td {
-    padding: 4px;
-
-    border: 1px solid #cbd1d7;
-
-    vertical-align: middle;
-
-    text-align: right;
-  }
-
-  td.row-label {
-    text-align: left;
-
-    font-weight: 600;
-
-    color: #303840;
-  }
-
-  tbody tr:nth-child(even) {
-    background: #fafbfc;
-  }
+  /*
+   * NARRATIVE
+   */
 
   .narrative-content {
     color: #3d454d;
@@ -329,31 +339,139 @@ export const reportPdfStyles = `
     text-align: justify;
   }
 
-  .charts {
+  /*
+   * TABLES
+   */
+
+  .table-section {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  .table-wrapper {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .financial-table {
+    width: 100%;
+
+    table-layout: fixed;
+
+    border-collapse: collapse;
+
+    font-size: 7.3px;
+  }
+
+  .financial-table thead {
+    display: table-header-group;
+  }
+
+  .financial-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .financial-table th {
+    padding: 5px 4px;
+
+    background: #e8edf3;
+
+    border: 1px solid #b9c2cc;
+
+    color: #29323b;
+
+    font-size: 7px;
+    font-weight: 700;
+
+    text-align: center;
+    vertical-align: middle;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .financial-table td {
+    padding: 4px;
+
+    border: 1px solid #cbd1d7;
+
+    vertical-align: middle;
+
+    text-align: right;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .financial-table .label-column {
+    width: 28%;
+    text-align: left;
+  }
+
+  .financial-table .value-column {
+    width: auto;
+    text-align: center;
+  }
+
+  .financial-table .row-label {
+    width: 28%;
+
+    text-align: left;
+
+    font-weight: 600;
+
+    color: #303840;
+
+    white-space: normal;
+  }
+
+  .financial-table .numeric-cell {
+    text-align: right;
+
+    white-space: nowrap;
+  }
+
+  .financial-table tbody tr:nth-child(even) {
+    background: #f7f9fb;
+  }
+
+  /*
+   * CHARTS
+   */
+
+  .charts-grid {
     display: grid;
 
     grid-template-columns:
       repeat(2, minmax(0, 1fr));
 
-    gap: 10px;
+    gap: 12px;
+  }
+
+  .chart-section {
+    break-inside: auto;
+    page-break-inside: auto;
   }
 
   .chart-card {
-    border: 1px solid #d0d6dc;
+    border: 1px solid #d1d7dd;
 
-    padding: 8px;
+    background: #ffffff;
 
-    background: #fbfcfd;
+    padding: 10px;
 
     break-inside: avoid;
+    page-break-inside: avoid;
   }
 
-  .chart-card h3 {
-    margin: 0 0 4px;
+  .chart-card-title {
+    font-size: 9px;
+    font-weight: 700;
 
-    font-size: 8.5px;
+    color: #1f2933;
 
-    color: #303943;
+    margin-bottom: 5px;
   }
 
   .chart-svg {
@@ -364,7 +482,7 @@ export const reportPdfStyles = `
   }
 
   .chart-axis {
-    stroke: #aeb7c0;
+    stroke: #9ca8b3;
     stroke-width: 1;
   }
 
@@ -372,23 +490,37 @@ export const reportPdfStyles = `
     fill: #2f638f;
   }
 
+  .chart-line {
+    stroke: #1f4e79;
+    stroke-width: 3;
+
+    fill: none;
+  }
+
+  .chart-point {
+    fill: #1f4e79;
+  }
+
   .chart-value {
+    fill: #344454;
+
     font-size: 8px;
-    fill: #303943;
   }
 
   .chart-label {
-    font-size: 7px;
-    fill: #6b747d;
-  }
-
-  .chart-legend {
-    margin-top: 2px;
-
-    color: #69737d;
+    fill: #66727d;
 
     font-size: 7px;
   }
+
+  .pie-slice {
+    stroke: #ffffff;
+    stroke-width: 2;
+  }
+
+  /*
+   * FOOTER
+   */
 
   .report-footer {
     display: flex;
@@ -407,6 +539,10 @@ export const reportPdfStyles = `
     font-size: 6.5px;
   }
 
+  /*
+   * PRINT
+   */
+
   @media print {
     .section {
       break-inside: avoid;
@@ -416,170 +552,14 @@ export const reportPdfStyles = `
       break-inside: auto;
     }
 
+    .financial-table tr {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
     .chart-card {
       break-inside: avoid;
+      page-break-inside: avoid;
     }
   }
-
-  .kpi-grid {
-  display: grid;
-
-  grid-template-columns:
-    repeat(4, 1fr);
-
-  gap: 7px;
-
-  margin-bottom: 14px;
-}
-
-.kpi-card {
-  min-height: 58px;
-
-  padding: 8px 9px;
-
-  border: 1px solid #d1d7dd;
-
-  border-top: 3px solid #1f4e79;
-
-  background: #f8fafc;
-}
-
-.kpi-card span {
-  display: block;
-
-  color: #707983;
-
-  font-size: 7px;
-
-  text-transform: uppercase;
-
-  letter-spacing: 0.4px;
-}
-
-.kpi-card strong {
-  display: block;
-
-  margin-top: 4px;
-
-  font-size: 12px;
-
-  color: #1d2733;
-}
-
-.kpi-card small {
-  display: block;
-
-  margin-top: 2px;
-
-  color: #858d95;
-
-  font-size: 6.5px;
-}
-
-.financial-table {
-  width: 100%;
-
-  table-layout: fixed;
-}
-
-.financial-table th,
-.financial-table td {
-  overflow: hidden;
-
-  text-overflow: ellipsis;
-}
-
-.financial-table .label-column {
-  width: 28%;
-
-  text-align: left;
-}
-
-.financial-table .value-column {
-  width: auto;
-
-  text-align: center;
-}
-
-.financial-table .row-label {
-  width: 28%;
-
-  text-align: left;
-
-  white-space: normal;
-}
-
-.financial-table .numeric-cell {
-  text-align: right;
-
-  white-space: nowrap;
-}
-
-.financial-table tbody tr:nth-child(even) {
-  background: #f7f9fb;
-}
-
-.financial-table tbody tr:hover {
-  background: transparent;
-}
-
-.charts-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.chart-card {
-  border: 1px solid #d1d7dd;
-  background: #ffffff;
-  padding: 10px;
-  break-inside: avoid;
-}
-
-.chart-card-title {
-  font-size: 9px;
-  font-weight: 700;
-  color: #1f2933;
-  margin-bottom: 5px;
-}
-
-.chart-svg {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.chart-axis {
-  stroke: #9ca8b3;
-  stroke-width: 1;
-}
-
-.chart-bar {
-  fill: #2f638f;
-}
-
-.chart-line {
-  stroke: #1f4e79;
-  stroke-width: 3;
-}
-
-.chart-point {
-  fill: #1f4e79;
-}
-
-.chart-value {
-  fill: #344454;
-  font-size: 9px;
-}
-
-.chart-label {
-  fill: #66727d;
-  font-size: 9px;
-}
-
-.pie-slice {
-  stroke: #ffffff;
-  stroke-width: 2;
-}
 `;
-

@@ -1,5 +1,7 @@
 import type { Report } from "../report.schema";
+
 import { reportPdfStyles } from "./report-pdf.styles";
+
 import {
   escapeHtml,
   formatValue,
@@ -7,44 +9,64 @@ import {
   formatCurrencyValue,
   normalizeLabel,
   isPercentColumnLabel,
+  isPercentRowLabel,
+  isPercentTable,
   getLatestValueIndex,
   companySnapshotHasDisplayableData,
   SECTION_TYPE_TITLES,
 } from "./report-pdf.formatters";
-
-
+import { getReportCharts } from "./report-pdf.chart";
 
 function renderSectionTitle(number: number, title: string): string {
   return `
     <div class="section-title">
-      <span>
+      <span class="section-number">
         ${String(number).padStart(2, "0")}
       </span>
 
-      ${formatValue(title)}
+      <span>
+        ${formatValue(title)}
+      </span>
     </div>
   `;
 }
 
 function renderHeader(report: Report): string {
   const { company } = report;
+
+  const meta = [
+    company.sector,
+    company.industry,
+    company.exchange,
+    company.ticker,
+  ]
+    .filter(Boolean)
+    .map(formatValue)
+    .join(" · ");
+
   return `
     <header class="report-header">
       <div class="eyebrow">
         EQUITY RESEARCH
       </div>
+
       <div class="header-main">
-        <div>
+        <div class="company-heading">
           <h1>
             ${formatValue(company.name)}
           </h1>
-          <div class="company-meta">
-            ${formatValue(company.sector)}
-            ${company.industry ? ` · ${formatValue(company.industry)}` : ""}
-            ${company.exchange ? ` · ${formatValue(company.exchange)}` : ""}
-            ${company.ticker ? ` · ${formatValue(company.ticker)}` : ""}
-          </div>
+
+          ${
+            meta
+              ? `
+                <div class="company-meta">
+                  ${meta}
+                </div>
+              `
+              : ""
+          }
         </div>
+
         <div class="report-info">
           <div>
             <span>Report Type</span>
@@ -52,6 +74,7 @@ function renderHeader(report: Report): string {
               ${formatValue(company.reportType)}
             </strong>
           </div>
+
           <div>
             <span>Report Date</span>
             <strong>
@@ -66,37 +89,52 @@ function renderHeader(report: Report): string {
 
 function renderRecommendation(report: Report): string {
   const recommendation = report.recommendation;
+
   if (!recommendation) {
     return "";
   }
+
+  const hasAnyData =
+    recommendation.rating ||
+    recommendation.currentPrice !== null ||
+    recommendation.targetPrice !== null ||
+    recommendation.expectedReturn !== null ||
+    recommendation.timeframe;
+
+  if (!hasAnyData) {
+    return "";
+  }
+
   return `
     <section class="recommendation-card">
       <div class="recommendation-rating">
-        <span>
-          Recommendation
-        </span>
+        <span>Recommendation</span>
         <strong>
           ${formatValue(recommendation.rating)}
         </strong>
       </div>
+
       <div>
         <span>Current Price</span>
         <strong>
           ${formatValue(recommendation.currentPrice)}
         </strong>
       </div>
+
       <div>
         <span>Target Price</span>
         <strong>
           ${formatValue(recommendation.targetPrice)}
         </strong>
       </div>
+
       <div>
         <span>Expected Return</span>
         <strong>
           ${formatValue(recommendation.expectedReturn)}
         </strong>
       </div>
+
       <div>
         <span>Timeframe</span>
         <strong>
@@ -107,50 +145,44 @@ function renderRecommendation(report: Report): string {
   `;
 }
 
-
-const DISPLAYED_COMPANY_DATA_KEYS = [
-  "marketCap",
-  "enterpriseValue",
-  "outstandingShares",
-  "freeFloat",
-  "dividendYield",
-  "beta",
-  "faceValue",
-  "fiftyTwoWeekHigh",
-  "fiftyTwoWeekLow",
-] as const;
-
-
 function renderKpis(report: Report): string {
   const incomeStatement = report.tables.find(
-    (table) => table.category === "income-statement",
+    (table) => normalizeLabel(table.category) === "incomestatement",
   );
+
   if (!incomeStatement) {
     return "";
   }
+
   const findRow = (label: string) => {
     const target = normalizeLabel(label);
+
     return incomeStatement.rows.find(
       (row) => normalizeLabel(row.label) === target,
     );
   };
 
   const revenue = findRow("Revenue");
+
   const netIncome = findRow("Net Income");
-  const ebitMargin = findRow("EBIT Margin (%)");
+
+  const ebitMargin = findRow("EBIT Margin (%)") ?? findRow("EBIT Margin");
+
   const latestIndex = getLatestValueIndex(incomeStatement);
+
   const latestPeriod =
     incomeStatement.columns[latestIndex + 1]?.label ?? "Latest";
 
   return `
     <section class="kpi-grid">
+
       <div class="kpi-card">
-        <span>
-          Revenue
-        </span>
+        <span>Revenue</span>
+
         <strong>
           ${formatCurrencyValue(revenue?.values[latestIndex])}
         </strong>
+
         <small>
           ${formatValue(latestPeriod)}
           ${
@@ -160,39 +192,43 @@ function renderKpis(report: Report): string {
           }
         </small>
       </div>
+
       <div class="kpi-card">
-        <span>
-          Net Income
-        </span>
+        <span>Net Income</span>
+
         <strong>
           ${formatCurrencyValue(netIncome?.values[latestIndex])}
         </strong>
+
         <small>
           ${formatValue(latestPeriod)}
         </small>
       </div>
+
       <div class="kpi-card">
-        <span>
-          EBIT Margin
-        </span>
+        <span>EBIT Margin</span>
+
         <strong>
           ${formatPercentValue(ebitMargin?.values[latestIndex])}
         </strong>
+
         <small>
           ${formatValue(latestPeriod)}
         </small>
       </div>
+
       <div class="kpi-card">
-        <span>
-          Financial Tables
-        </span>
+        <span>Financial Tables</span>
+
         <strong>
           ${report.tables.length}
         </strong>
+
         <small>
           Extracted
         </small>
       </div>
+
     </section>
   `;
 }
@@ -201,12 +237,15 @@ function renderSummary(report: Report, sectionNumber: number): string {
   return `
     <section class="section">
       ${renderSectionTitle(sectionNumber, "Executive Summary")}
+
       <h2 class="summary-headline">
         ${formatValue(report.summary.headline)}
       </h2>
+
       <p class="lead">
         ${formatValue(report.summary.overview)}
       </p>
+
       ${
         report.summary.bulletPoints.length
           ? `
@@ -216,13 +255,16 @@ function renderSummary(report: Report, sectionNumber: number): string {
                   (point) => `
                     <div class="highlight">
                       <span class="highlight-marker"></span>
+
                       <span>
                         ${formatValue(point)}
                       </span>
-                    </div>`,
+                    </div>
+                  `,
                 )
                 .join("")}
-            </div>`
+            </div>
+          `
           : ""
       }
     </section>
@@ -236,6 +278,10 @@ function renderCompanySnapshot(report: Report, sectionNumber: number): string {
 
   const data = report.companyData;
 
+  if (!companySnapshotHasDisplayableData(data)) {
+    return "";
+  }
+
   const metrics = [
     ["Market Cap", data.marketCap],
     ["Enterprise Value", data.enterpriseValue],
@@ -248,15 +294,10 @@ function renderCompanySnapshot(report: Report, sectionNumber: number): string {
     ["52W Low", data.fiftyTwoWeekLow],
   ];
 
-  const hasAnyValue = companySnapshotHasDisplayableData(report.companyData);
-
-  if (!hasAnyValue) {
-    return "";
-  }
-
   return `
     <section class="section">
       ${renderSectionTitle(sectionNumber, "Company Snapshot")}
+
       <div class="metrics-grid">
         ${metrics
           .map(
@@ -265,6 +306,7 @@ function renderCompanySnapshot(report: Report, sectionNumber: number): string {
                 <span>
                   ${escapeHtml(label)}
                 </span>
+
                 <strong>
                   ${formatValue(value)}
                 </strong>
@@ -276,6 +318,7 @@ function renderCompanySnapshot(report: Report, sectionNumber: number): string {
     </section>
   `;
 }
+
 function getDedupedSections(report: Report): Report["sections"] {
   const seenTypes = new Set<string>();
 
@@ -296,30 +339,33 @@ function getDedupedSections(report: Report): Report["sections"] {
       }
 
       seenTypes.add(section.type);
+
       return true;
     });
 }
 
 function renderSections(report: Report, startSectionNumber: number): string {
-  const deduped = getDedupedSections(report);
+  const sections = getDedupedSections(report);
 
-  if (!deduped.length) {
+  if (!sections.length) {
     return "";
   }
 
-  return deduped
+  return sections
     .map((section, index) => {
       const title = SECTION_TYPE_TITLES[section.type] ?? section.title;
+
       return `
-        <section
-          class="section narrative-section"
-        >
-          ${renderSectionTitle(startSectionNumber + index, title)}
-          <div class="narrative-content">
-            ${formatValue(section.content)}
-          </div>
-        </section>
-      `;
+          <section class="section narrative-section">
+
+            ${renderSectionTitle(startSectionNumber + index, title)}
+
+            <div class="narrative-content">
+              ${formatValue(section.content)}
+            </div>
+
+          </section>
+        `;
     })
     .join("");
 }
@@ -331,18 +377,23 @@ function renderTable(
   if (!table.columns.length || !table.rows.length) {
     return "";
   }
+
   const valueColumnCount = table.columns.length - 1;
-  const isPercentColumn = table.columns
+
+  const percentColumns = table.columns
     .slice(1)
     .map((column) => isPercentColumnLabel(column.label));
 
+  const tableIsPercent = isPercentTable(table);
+
   return `
-    <section
-      class="section table-section"
-    >
+    <section class="section table-section">
+
       ${renderSectionTitle(sectionNumber, table.title)}
+
       <div class="table-wrapper">
         <table class="financial-table">
+
           <thead>
             <tr>
               ${table.columns
@@ -358,6 +409,7 @@ function renderTable(
                 .join("")}
             </tr>
           </thead>
+
           <tbody>
             ${table.rows
               .map((row) => {
@@ -367,31 +419,41 @@ function renderTable(
                   },
                   (_, index) => row.values[index] ?? null,
                 );
+
+                const rowIsPercent = isPercentRowLabel(row.label);
+
                 return `
-                  <tr>
-                    <td class="row-label">
-                      ${formatValue(row.label)}
-                    </td>
-                    ${values
-                      .map(
-                        (value, index) => `
-                          <td
-                            class="numeric-cell"
-                          >
-                            ${
-                              isPercentColumn[index]
-                                ? formatPercentValue(value)
-                                : formatValue(value)
-                            }
-                          </td>
-                        `,
-                      )
-                      .join("")}
-                  </tr>
-                `;
+                    <tr>
+
+                      <td class="row-label">
+                        ${formatValue(row.label)}
+                      </td>
+
+                      ${values
+                        .map((value, index) => {
+                          const shouldFormatPercent =
+                            percentColumns[index] ||
+                            rowIsPercent ||
+                            tableIsPercent;
+
+                          return `
+                              <td class="numeric-cell">
+                                ${
+                                  shouldFormatPercent
+                                    ? formatPercentValue(value)
+                                    : formatValue(value)
+                                }
+                              </td>
+                            `;
+                        })
+                        .join("")}
+
+                    </tr>
+                  `;
               })
               .join("")}
           </tbody>
+
         </table>
       </div>
     </section>
@@ -420,55 +482,66 @@ function renderBarChart(chart: Report["charts"][number]): string {
   const bottom = 55;
 
   const chartWidth = width - left - right;
+
   const chartHeight = height - top - bottom;
+
   const slotWidth = chartWidth / values.length;
+
   const barWidth = Math.min(slotWidth * 0.55, 70);
 
   const bars = values
     .map((value, index) => {
       const barHeight = (Math.abs(value) / max) * chartHeight;
+
       const x = left + index * slotWidth + (slotWidth - barWidth) / 2;
+
       const y = top + chartHeight - barHeight;
+
       const label = chart.labels[index] ?? "";
 
       return `
-        <rect
-          x="${x}"
-          y="${y}"
-          width="${barWidth}"
-          height="${barHeight}"
-          rx="3"
-          class="chart-bar"
-        />
-        <text
-          x="${x + barWidth / 2}"
-          y="${Math.max(y - 8, 12)}"
-          text-anchor="middle"
-          class="chart-value"
-        >
-          ${formatValue(value)}
-        </text>
-        <text
-          x="${x + barWidth / 2}"
-          y="${height - 20}"
-          text-anchor="middle"
-          class="chart-label"
-        >
-          ${formatValue(label)}
-        </text>
-      `;
+          <rect
+            x="${x}"
+            y="${y}"
+            width="${barWidth}"
+            height="${barHeight}"
+            rx="3"
+            class="chart-bar"
+          />
+
+          <text
+            x="${x + barWidth / 2}"
+            y="${Math.max(y - 8, 12)}"
+            text-anchor="middle"
+            class="chart-value"
+          >
+            ${formatValue(value)}
+          </text>
+
+          <text
+            x="${x + barWidth / 2}"
+            y="${height - 20}"
+            text-anchor="middle"
+            class="chart-label"
+          >
+            ${formatValue(label)}
+          </text>
+        `;
     })
     .join("");
 
   return `
     <div class="chart-card">
+
       <div class="chart-card-title">
         ${formatValue(chart.title)}
       </div>
+
       <svg
         viewBox="0 0 ${width} ${height}"
         class="chart-svg"
       >
+
         <line
           x1="${left}"
           y1="${top}"
@@ -476,6 +549,7 @@ function renderBarChart(chart: Report["charts"][number]): string {
           y2="${height - bottom}"
           class="chart-axis"
         />
+
         <line
           x1="${left}"
           y1="${height - bottom}"
@@ -483,8 +557,11 @@ function renderBarChart(chart: Report["charts"][number]): string {
           y2="${height - bottom}"
           class="chart-axis"
         />
+
         ${bars}
+
       </svg>
+
     </div>
   `;
 }
@@ -509,14 +586,18 @@ function renderLineChart(chart: Report["charts"][number]): string {
   const bottom = 55;
 
   const chartWidth = width - left - right;
+
   const chartHeight = height - top - bottom;
 
   const min = Math.min(...values);
+
   const max = Math.max(...values);
+
   const range = max - min || 1;
 
   const points = values.map((value, index) => {
     const x = left + (index / (values.length - 1)) * chartWidth;
+
     const y = top + chartHeight - ((value - min) / range) * chartHeight;
 
     return {
@@ -540,6 +621,7 @@ function renderLineChart(chart: Report["charts"][number]): string {
             r="4"
             class="chart-point"
           />
+
           <text
             x="${point.x}"
             y="${point.y - 10}"
@@ -548,6 +630,7 @@ function renderLineChart(chart: Report["charts"][number]): string {
           >
             ${formatValue(point.value)}
           </text>
+
           <text
             x="${point.x}"
             y="${height - 20}"
@@ -562,9 +645,11 @@ function renderLineChart(chart: Report["charts"][number]): string {
 
   return `
     <div class="chart-card">
+
       <div class="chart-card-title">
         ${formatValue(chart.title)}
       </div>
+
       <svg
         viewBox="0 0 ${width} ${height}"
         class="chart-svg"
@@ -591,8 +676,11 @@ function renderLineChart(chart: Report["charts"][number]): string {
           fill="none"
           class="chart-line"
         />
+
         ${pointsMarkup}
+
       </svg>
+
     </div>
   `;
 }
@@ -632,46 +720,53 @@ function renderPieChart(chart: Report["charts"][number]): string {
   const slices = values
     .map((value, index) => {
       const angle = (value / total) * Math.PI * 2;
+
       const startAngle = currentAngle;
+
       const endAngle = currentAngle + angle;
 
       currentAngle = endAngle;
 
       const x1 = cx + radius * Math.cos(startAngle);
+
       const y1 = cy + radius * Math.sin(startAngle);
+
       const x2 = cx + radius * Math.cos(endAngle);
+
       const y2 = cy + radius * Math.sin(endAngle);
 
       const largeArc = angle > Math.PI ? 1 : 0;
 
       const path = `
-        M ${cx} ${cy}
-        L ${x1} ${y1}
-        A ${radius} ${radius}
-          0 ${largeArc} 1
-          ${x2} ${y2}
-        Z
-      `;
+            M ${cx} ${cy}
+            L ${x1} ${y1}
+            A ${radius} ${radius}
+              0 ${largeArc} 1
+              ${x2} ${y2}
+            Z
+          `;
 
       const label = chart.labels[index] ?? "";
+
       const color = dataset.color ?? colors[index % colors.length];
 
       return `
-        <path
-          d="${path}"
-          fill="${color}"
-          class="pie-slice"
-        />
-        <text
-          x="300"
-          y="${45 + index * 25}"
-          class="chart-label"
-        >
-          ${formatValue(label)}
-          —
-          ${formatValue(value)}
-        </text>
-      `;
+            <path
+              d="${path}"
+              fill="${color}"
+              class="pie-slice"
+            />
+
+            <text
+              x="300"
+              y="${45 + index * 25}"
+              class="chart-label"
+            >
+              ${formatValue(label)}
+              —
+              ${formatValue(value)}
+            </text>
+          `;
     })
     .join("");
 
@@ -689,9 +784,11 @@ function renderPieChart(chart: Report["charts"][number]): string {
 
   return `
     <div class="chart-card">
+
       <div class="chart-card-title">
         ${formatValue(chart.title)}
       </div>
+
       <svg
         viewBox="0 0 620 260"
         class="chart-svg"
@@ -699,6 +796,7 @@ function renderPieChart(chart: Report["charts"][number]): string {
         ${slices}
         ${center}
       </svg>
+
     </div>
   `;
 }
@@ -723,8 +821,8 @@ function renderChart(chart: Report["charts"][number]): string {
   }
 }
 
-function renderCharts(report: Report, sectionNumber: number): string {
-  const renderedCharts = report.charts
+function renderCharts(charts: Report["charts"], sectionNumber: number): string {
+  const renderedCharts = charts
     .map(renderChart)
     .filter((chart) => chart.length > 0);
 
@@ -733,20 +831,24 @@ function renderCharts(report: Report, sectionNumber: number): string {
   }
 
   return `
-    <section
-      class="section chart-section"
-    >
+    <section class="section chart-section">
+
       ${renderSectionTitle(sectionNumber, "Financial Trends")}
+
       <div class="charts-grid">
         ${renderedCharts.join("")}
       </div>
+
     </section>
   `;
 }
 
 function renderFooter(report: Report): string {
+  const generatedAt = new Date().toISOString().slice(0, 10);
+
   return `
     <footer class="report-footer">
+
       <span>
         Source:
         ${formatValue(report.metadata.sourceFile)}
@@ -754,7 +856,7 @@ function renderFooter(report: Report): string {
 
       <span>
         Generated:
-        ${new Date().toISOString()}
+        ${generatedAt}
       </span>
 
     </footer>
@@ -765,61 +867,88 @@ export function buildReportHtml(report: Report): string {
   let nextSectionNumber = 1;
 
   const summarySectionNumber = nextSectionNumber++;
- const companySnapshotHasData = companySnapshotHasDisplayableData(
-  report.companyData,
-);
 
-  const companySnapshotSectionNumber = companySnapshotHasData
+  const hasCompanySnapshot = companySnapshotHasDisplayableData(
+    report.companyData,
+  );
+
+  const companySnapshotSectionNumber = hasCompanySnapshot
     ? nextSectionNumber++
     : null;
 
+  const narrativeSections = getDedupedSections(report);
+
   const narrativeStartNumber = nextSectionNumber;
-  nextSectionNumber += getDedupedSections(report).length; 
+
+  nextSectionNumber += narrativeSections.length;
 
   const tableStartNumber = nextSectionNumber;
+
   nextSectionNumber += report.tables.length;
 
-  const chartsSectionNumber = report.charts.length ? nextSectionNumber++ : null;
+  const charts = getReportCharts(report);
+
+  const chartsSectionNumber = charts.length ? nextSectionNumber++ : null;
 
   return `
     <!DOCTYPE html>
+
     <html lang="en">
+
       <head>
+
         <meta charset="UTF-8" />
+
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1.0"
         />
+
         <title>
           ${formatValue(report.company.name)}
           Research Report
         </title>
+
         <style>
           ${reportPdfStyles}
         </style>
+
       </head>
+
       <body>
+
         <main class="report">
 
           ${renderHeader(report)}
+
           ${renderRecommendation(report)}
+
           ${renderKpis(report)}
+
           ${renderSummary(report, summarySectionNumber)}
+
           ${
             companySnapshotSectionNumber
               ? renderCompanySnapshot(report, companySnapshotSectionNumber)
               : ""
           }
+
           ${renderSections(report, narrativeStartNumber)}
+
           ${report.tables
             .map((table, index) => renderTable(table, tableStartNumber + index))
             .join("")}
+
           ${
-            chartsSectionNumber ? renderCharts(report, chartsSectionNumber) : ""
+            chartsSectionNumber ? renderCharts(charts, chartsSectionNumber) : ""
           }
+
           ${renderFooter(report)}
+
         </main>
+
       </body>
+
     </html>
   `;
 }

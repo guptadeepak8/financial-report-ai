@@ -1,7 +1,11 @@
 import { z } from "zod";
+
 import { gemini, getAvailableGeminiModel } from "../../lib/gemini";
+
 import { AppError } from "../../utils/app-error";
+
 import { parseDocument } from "../documents/document.service";
+
 import { buildReportPrompt } from "./report.prompt";
 
 import {
@@ -13,6 +17,7 @@ import {
 } from "./report.repository";
 
 import { aiReportSchema, type Report } from "./report.schema";
+
 import { generateReportPdf } from "./pdf/report-pdf.service";
 
 export async function extractReport(
@@ -91,17 +96,11 @@ export async function extractReport(
   }
 }
 
-export async function createReportJob(
-  companyName: string,
-  originalFileName: string,
-) {
-  return createReport({
-    companyName,
-    originalFileName,
-  });
+export function createReportJob(companyName: string, originalFileName: string) {
+  return createReport(companyName, originalFileName);
 }
 
-export async function getReportById(reportId: string) {
+export function getReportById(reportId: string) {
   return findReportById(reportId);
 }
 
@@ -109,9 +108,9 @@ export async function processReport(
   reportId: string,
   filePath: string,
   originalFileName: string,
-) {
+): Promise<void> {
   try {
-    await updateReportStatus(
+    updateReportStatus(
       reportId,
       "extracting",
       "Reading financial document",
@@ -119,7 +118,7 @@ export async function processReport(
 
     const document = await parseDocument(filePath, originalFileName);
 
-    await updateReportStatus(
+    updateReportStatus(
       reportId,
       "analyzing",
       "Analyzing financial information with AI",
@@ -131,13 +130,13 @@ export async function processReport(
       document.fileType,
     );
 
-    await updateReportStatus(
+    updateReportStatus(
       reportId,
       "report_generated",
-      "Financial research report generated",
+      "Financial research data generated",
     );
 
-    await updateReportData(reportId, {
+    updateReportData(reportId, {
       company: report.company,
       recommendation: report.recommendation,
       summary: report.summary,
@@ -148,23 +147,21 @@ export async function processReport(
       metadata: report.metadata,
     });
 
-    await updateReportStatus(
+     updateReportStatus(
       reportId,
       "pdf_generating",
       "Generating PDF report",
     );
 
-    // PDF generation.
-
     const pdfPath = await generateReportPdf(report, reportId);
 
-    await updateReportPdfPath(reportId, pdfPath);
+    updateReportPdfPath(reportId, pdfPath);
 
-    await updateReportStatus(reportId, "completed", "Report ready");
+    updateReportStatus(reportId, "completed", "Report ready");
   } catch (error) {
-    console.error(`Report ${reportId} processing failed:`, error);
+    console.error(`Report ${reportId} failed:`, error);
 
-    await updateReportStatus(
+    updateReportStatus(
       reportId,
       "failed",
       "Report generation failed",

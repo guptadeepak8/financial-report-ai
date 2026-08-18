@@ -4,11 +4,8 @@ import type { ReportStatus } from "./report.schema";
 
 export interface ReportStatusEvent {
   reportId: string;
-
   status: ReportStatus;
-
   currentStep: string;
-
   errorMessage?: string | null;
 }
 
@@ -25,7 +22,6 @@ export function subscribeToReport(
   listener: (event: ReportStatusEvent) => void,
 ): () => void {
   const eventName = `report:${reportId}`;
-
   reportEventEmitter.on(eventName, listener);
 
   return () => {
