@@ -88,16 +88,28 @@ RULES:
       breaks down revenue by region, project type,
       or client concentration
 
-    Only skip a category if the source document
-    genuinely contains no data for it. Do not
-    selectively extract a subset of rows within
-    a table category if more rows are available in
-    the source — e.g. if the source's income statement
-    includes Gross Margin, EBITDA Margin, EBIT Margin,
-    AND Net Income Margin, extract all four rows, not
-    a partial selection.
+     Only skip a category if the source document
+     genuinely contains no data for it. Do not
+     selectively extract a subset of rows, columns, or
+     sibling tables within a category if more are available
+     in the source — e.g. if the source's income statement
+     includes Gross Margin, EBITDA Margin, EBIT Margin,
+     AND Net Income Margin, extract all four rows; if a
+     segment table reports both segment-wise Revenue AND
+     segment-wise EBITDA, extract both, not just one; if an
+     operational table reports generation for four periods
+     AND separate PLF/CUF figures, extract every period and
+     every metric column, not a subset.
 
-24. CONSISTENCY: Given the same source document, your
+24. TREND DEPTH: If any table category in Rule 23 spans
+    more than two reporting periods in the source (e.g. a
+    6-column P&L, a 3-point NPA ratio trend, a quarterly
+    leverage series), extract every period given. Do not
+    truncate a multi-period series down to current + prior
+    year — period count is part of table completeness, not
+    an optional enrichment.
+
+25. CONSISTENCY: Given the same source document, your
     extraction should be deterministic — the same
     tables, rows, and sections should be extracted
     every time. Do not vary which tables or rows you
