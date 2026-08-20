@@ -1,18 +1,6 @@
 import type { Chart, FinancialTable, Report } from "../report.schema";
+import { toNumber } from "./report-pdf.formatters";
 
-function toNumber(value: unknown): number | null {
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? value : null;
-  }
-
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const parsed = Number(value.replaceAll(",", "").replace("%", "").trim());
-
-  return Number.isFinite(parsed) ? parsed : null;
-}
 
 export function createRevenueChart(table: FinancialTable): Chart | null {
   const revenueRow = table.rows.find(

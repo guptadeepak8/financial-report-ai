@@ -37,6 +37,7 @@ export function ReportProgress({ status, isConnected, companyName }: ReportProgr
   }
 
   const currentIndex = steps.findIndex((s) => s.status === status);
+  const isJobComplete = status === "completed";
 
   return (
     <aside className="h-fit rounded-2xl border border-white/20 bg-black p-6 lg:sticky lg:top-10">
@@ -51,8 +52,8 @@ export function ReportProgress({ status, isConnected, companyName }: ReportProgr
 
       <div className="mt-6 border-t border-white/20 pt-1">
         {steps.map((step, index) => {
-          const completed = currentIndex > index;
-          const current = currentIndex === index;
+          const completed = isJobComplete || currentIndex > index;
+          const current = !isJobComplete && currentIndex === index;
 
           return (
             <div key={step.status} className="flex items-center gap-3 border-b border-white/10 py-3 last:border-b-0">

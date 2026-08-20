@@ -14,6 +14,7 @@ import {
   getLatestValueIndex,
   companySnapshotHasDisplayableData,
   SECTION_TYPE_TITLES,
+  findAllKpiMatches,
 } from "./report-pdf.formatters";
 import { getReportCharts } from "./report-pdf.chart";
 
@@ -146,89 +147,47 @@ function renderRecommendation(report: Report): string {
 }
 
 function renderKpis(report: Report): string {
-  const incomeStatement = report.tables.find(
-    (table) => normalizeLabel(table.category) === "incomestatement",
-  );
+  const matches = findAllKpiMatches(report);
 
-  if (!incomeStatement) {
+  const kpiCards = matches
+    .map((match) => {
+      const formattedValue =
+        match.slot.format === "percent"
+          ? formatPercentValue(match.value)
+          : formatCurrencyValue(match.value);
+
+      return `
+        <div class="kpi-card">
+          <span>${escapeHtml(match.matchedLabel)}</span>
+
+          <strong>${formattedValue}</strong>
+
+          <small>
+            ${formatValue(match.period)}
+            ${
+              match.slot.format === "currency" && report.company.currency
+                ? ` · ${formatValue(report.company.currency)}`
+                : ""
+            }
+          </small>
+        </div>
+      `;
+    })
+    .join("");
+
+  if (!kpiCards) {
     return "";
   }
 
-  const findRow = (label: string) => {
-    const target = normalizeLabel(label);
-
-    return incomeStatement.rows.find(
-      (row) => normalizeLabel(row.label) === target,
-    );
-  };
-
-  const revenue = findRow("Revenue");
-
-  const netIncome = findRow("Net Income");
-
-  const ebitMargin = findRow("EBIT Margin (%)") ?? findRow("EBIT Margin");
-
-  const latestIndex = getLatestValueIndex(incomeStatement);
-
-  const latestPeriod =
-    incomeStatement.columns[latestIndex + 1]?.label ?? "Latest";
-
   return `
     <section class="kpi-grid">
-
-      <div class="kpi-card">
-        <span>Revenue</span>
-
-        <strong>
-          ${formatCurrencyValue(revenue?.values[latestIndex])}
-        </strong>
-
-        <small>
-          ${formatValue(latestPeriod)}
-          ${
-            report.company.currency
-              ? ` · ${formatValue(report.company.currency)}`
-              : ""
-          }
-        </small>
-      </div>
-
-      <div class="kpi-card">
-        <span>Net Income</span>
-
-        <strong>
-          ${formatCurrencyValue(netIncome?.values[latestIndex])}
-        </strong>
-
-        <small>
-          ${formatValue(latestPeriod)}
-        </small>
-      </div>
-
-      <div class="kpi-card">
-        <span>EBIT Margin</span>
-
-        <strong>
-          ${formatPercentValue(ebitMargin?.values[latestIndex])}
-        </strong>
-
-        <small>
-          ${formatValue(latestPeriod)}
-        </small>
-      </div>
+      ${kpiCards}
 
       <div class="kpi-card">
         <span>Financial Tables</span>
-
-        <strong>
-          ${report.tables.length}
-        </strong>
-
-        <small>
-          Extracted
-        </small>
+        <strong>${report.tables.length}</strong>
+        <small>Extracted</small>
       </div>
-
     </section>
   `;
 }
@@ -384,8 +343,6 @@ function renderTable(
     .slice(1)
     .map((column) => isPercentColumnLabel(column.label));
 
-  const tableIsPercent = isPercentTable(table);
-
   return `
     <section class="section table-section">
 
@@ -420,7 +377,9 @@ function renderTable(
                   (_, index) => row.values[index] ?? null,
                 );
 
-                const rowIsPercent = isPercentRowLabel(row.label);
+                const rowFallbackIsPercent =
+                  row.valueType === undefined &&
+                  (isPercentRowLabel(row.label) || isPercentTable(table));
 
                 return `
                     <tr>
@@ -433,8 +392,8 @@ function renderTable(
                         .map((value, index) => {
                           const shouldFormatPercent =
                             percentColumns[index] ||
-                            rowIsPercent ||
-                            tableIsPercent;
+                            row.valueType === "percentage" ||
+                            rowFallbackIsPercent;
 
                           return `
                               <td class="numeric-cell">

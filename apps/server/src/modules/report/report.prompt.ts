@@ -43,6 +43,79 @@ CORE RULES:
 
 12. Do not fabricate missing information.
 
+TEXT CLEANLINESS:
+
+The source document text may contain extraction artifacts from PDF
+parsing: stray non-ASCII symbols, repeated/duplicated words,
+misplaced glyphs, broken ligatures, or encoding noise (for example
+a random CJK character appended to a number, or a word appearing
+twice in a row).
+
+When you encounter this:
+
+- Treat it as a text-extraction artifact, not real data.
+- Strip stray symbols that are not part of a legitimate number,
+  currency symbol, percent sign, or standard punctuation.
+- If a word is duplicated consecutively with no semantic reason
+  (e.g. "milestone milestones", "the the"), output it once.
+- If a numeric value has trailing/leading non-numeric noise
+  attached (e.g. "29.0%<unexpected-symbol>"), extract only the
+  clean numeric value and its unit (e.g. "29.0%").
+- If you cannot confidently determine the clean underlying value
+  because the noise makes it ambiguous, use null rather than
+  guessing.
+- Never include non-ASCII stray characters, control characters, or
+  encoding artifacts in any output field.
+- If the source text contains a bracketed placeholder-looking token
+  such as "<unexpected-...>" or similar angle-bracket markup that is
+  not a real financial term, treat it as a parsing artifact. Do not
+  include it in any output field, and do not duplicate a value to
+  "work around" it — use the single correct clean value only.
+
+VALUE TYPE DISCIPLINE:
+
+Every cell in every table must be classified internally as one of:
+
+- currency (an absolute monetary amount)
+- count (a whole number quantity, e.g. shares, headcount, clients)
+- percentage (a ratio, margin, growth rate, or mix share)
+- ratio (a non-percentage ratio, e.g. debt-to-equity expressed as x)
+- text (a label, category, or non-numeric value)
+
+Rules:
+
+- Do not place a percentage value inside a row/column that the rest
+  of the table treats as currency, or vice versa, even if that is
+  how it visually appeared in a misaligned source table.
+- If a single row within an otherwise-currency table is genuinely
+  reported as a percentage in the source (e.g. "FX gain as % of
+  other income"), keep it as a percentage value in that cell, but
+  do not let it silently break a Total/Sum row: if a Total row
+  exists and depends on that row being an absolute currency value,
+  re-check the source for the actual currency figure. If the
+  source only provides the percentage and not the underlying
+  currency amount, extract the percentage but do not attempt to
+  back into a currency total that were not explicitly stated.
+- Every row must use ONE consistent value type across all of its
+  periods/columns. Do not mix a percentage in one column and an
+  absolute number in another column of the same row.
+
+INTERNAL CONSISTENCY CHECKS:
+
+Before finalizing a table:
+
+- If a table contains a row labeled Total/Sum, check whether the
+  other rows in that table sum to it (allowing for standard
+  rounding, +/- 1 unit).
+- If they do not reconcile, re-read the source table carefully;
+  you likely misread a row, misplaced a value, or confused a
+  percentage with a currency figure. Correct the extraction rather
+  than forcing consistency by altering the real source values.
+- If after careful re-reading the values still do not reconcile,
+  extract exactly what the source shows and do not alter it to
+  force reconciliation — the source itself may be imprecise. Do
+  not silently adjust numbers to make totals match.
+
 COMPANY INFORMATION:
 
 Extract company name, sector, industry, exchange, ticker, ISIN,
@@ -66,6 +139,11 @@ Include:
 - important factual highlights
 
 Do not introduce information that is not present in the source.
+
+Do not repeat the same word or phrase twice in a row anywhere in
+generated prose (headline, overview, bullet points, or narrative
+sections). Proofread each generated sentence for accidental word
+duplication before including it in the output.
 
 NARRATIVE SECTIONS:
 
@@ -362,6 +440,71 @@ Rules for these fields:
 - Use null only when the value is genuinely absent from the source
   in any form.
 - State which period each value corresponds to (e.g. "FY 2025").
+
+GROWTH COLUMNS:
+
+Only include a QoQ/YoY/growth/change column for a table if the
+source document explicitly presents that column for that specific
+table.
+
+Do NOT compute, derive, or estimate growth percentages yourself,
+even if you can calculate them from the values shown.
+
+Do NOT copy a growth pattern from one table (e.g. the income
+statement) into a different table that does not itself contain a
+growth column in the source.
+
+If a table's growth column exists in the source but a specific
+period's value is not computable/displayed there, use null for
+that cell — do not calculate it.
+
+FINAL OUTPUT DISCIPLINE:
+
+- Output must be valid, parseable JSON matching the required schema
+  exactly — no markdown fences, no commentary, no preamble, no
+  trailing explanation.
+- Do not include any field not defined by the schema.
+- Do not leave a field as an empty string when null is more
+  accurate; use null for genuinely absent data and empty string
+  only when the source explicitly shows blank text.
+- Before returning the output, re-scan every generated numeric and
+  text field one final time for: stray non-ASCII characters,
+  duplicated words, mismatched percentage/currency types, and
+  unreconciled totals. Correct any that are found.
+
+
+ROW VALUE TYPE:
+
+Every row in every table must include a valueType field describing
+the type of values it contains:
+
+- "currency": absolute monetary amounts (revenue, profit, assets,
+  cash, etc.)
+- "count": whole-number quantities (headcount, number of clients,
+  outstanding shares, number of patents, etc.)
+- "percentage": ratios, margins, growth rates, or mix/composition
+  shares expressed as a percent
+- "ratio": non-percentage ratios (e.g. debt-to-equity expressed as
+  "x", interest coverage ratio)
+- "text": non-numeric or label-like values
+
+Rules:
+
+- A row must use exactly ONE valueType across all of its columns.
+  Do not mix currency and percentage values within the same row.
+- Determine valueType from the row's actual values and its label,
+  not from the table's category. A table categorized as
+  "revenue-mix" or "client-mix" may still contain rows that are
+  plain currency or count values (for example, an absolute revenue
+  figure sitting inside an otherwise percentage-based table). Tag
+  each row by what its own values actually are.
+- Growth/QoQ/YoY columns within a row do not change that row's
+  valueType; they are handled separately as growth columns.
+- If a table has a Total/Sum row, its valueType must match the
+  valueType of the rows it totals.
+
+This valueType field is required for every row and must be one of
+the five values listed above.
 
 SOURCE FIDELITY:
 

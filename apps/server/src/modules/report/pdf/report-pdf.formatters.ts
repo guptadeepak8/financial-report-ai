@@ -71,17 +71,11 @@ export function isNumericValue(value: unknown): boolean {
 
 export function toNumber(value: unknown): number | null {
   if (typeof value === "number") {
-    return Number.isFinite(value) ? value : null;
-  }
-
+    return Number.isFinite(value) ? value : null;  }
   if (typeof value !== "string") {
     return null;
   }
-
-  const normalized = value.replaceAll(",", "").replace("%", "").trim();
-
-  const parsed = Number(normalized);
-
+  const parsed = Number(value.replaceAll(",", "").replace("%", "").trim());
   return Number.isFinite(parsed) ? parsed : null;
 }
 
@@ -105,10 +99,33 @@ export function isPercentRowLabel(
   );
 }
 
+const PERCENT_TABLE_CATEGORIES = new Set([
+  "ratios",
+  "revenue-mix",
+  "segment-revenue",
+  "geography-mix",
+  "client-mix",
+  "project-type",
+  "shareholding",
+]);
+
 export function isPercentTable(
   table: Report["tables"][number],
 ): boolean {
-  return false;
+  if (PERCENT_TABLE_CATEGORIES.has(table.category)) {
+    return true;
+  }
+
+  // Fallback: if every non-label column header reads as a percent
+  // column (e.g. a custom-category table that is still % based),
+  // treat the table as percent-based.
+  const dataColumns = table.columns.slice(1);
+
+  if (dataColumns.length === 0) {
+    return false;
+  }
+
+  return dataColumns.every((column) => isPercentColumnLabel(column.label));
 }
 
 export function getLatestValueIndex(table: Report["tables"][number]): number {
@@ -189,4 +206,133 @@ export function getTableValue(
   const index = getLatestValueIndex(table);
 
   return row.values[index] ?? null;
+}
+
+export interface KpiSlotDefinition {
+  id: string;
+  label: string;
+  format: "currency" | "percent";
+  preferredCategories: string[];
+  aliases: string[];
+}
+
+export const KPI_SLOT_DEFINITIONS: KpiSlotDefinition[] = [
+  {
+    id: "revenue",
+    label: "Revenue",
+    format: "currency",
+    preferredCategories: [
+      "income-statement",
+      "financial-highlights",
+      "quarterly-results",
+    ],
+    aliases: [
+      "revenue",
+      "net revenue",
+      "total revenue",
+      "revenue from operations",
+      "total income",
+      "net interest income",
+      "core operating income",
+      "gross written premium",
+    ],
+  },
+  {
+    id: "netIncome",
+    label: "Net Income",
+    format: "currency",
+    preferredCategories: [
+      "income-statement",
+      "financial-highlights",
+      "quarterly-results",
+    ],
+    aliases: [
+      "net income",
+      "profit after tax",
+      "net profit",
+      "pat",
+    ],
+  },
+  {
+    id: "margin",
+    label: "Margin",
+    format: "percent",
+    preferredCategories: [
+      "income-statement",
+      "ratios",
+      "financial-highlights",
+    ],
+    aliases: [
+      "ebit margin",
+      "ebit margin (%)",
+      "net income margin",
+      "pat margin",
+      "net interest margin",
+      "core operating profit/average assets",
+      "return on average assets",
+      "return on equity",
+      "standalone return on equity",
+    ],
+  },
+];
+
+export interface KpiMatch {
+  slot: KpiSlotDefinition;
+  matchedLabel: string;
+  value: unknown;
+  period: string;
+}
+
+
+
+export function findKpiMatch(
+  report: Report,
+  slot: KpiSlotDefinition,
+): KpiMatch | null {
+  // Search preferred-category tables first, then fall back to all tables.
+  const preferredTables = report.tables.filter((table) =>
+    slot.preferredCategories.includes(table.category),
+  );
+  const otherTables = report.tables.filter(
+    (table) => !slot.preferredCategories.includes(table.category),
+  );
+  const searchOrder = [...preferredTables, ...otherTables];
+
+  for (const alias of slot.aliases) {
+    const target = normalizeLabel(alias);
+
+    for (const table of searchOrder) {
+      const row = table.rows.find(
+        (item) => normalizeLabel(item.label) === target,
+      );
+
+      if (!row) {
+        continue;
+      }
+
+      const latestIndex = getLatestValueIndex(table);
+      const value = row.values[latestIndex];
+
+      if (value === null || value === undefined || value === "") {
+        continue;
+      }
+
+      const period = table.columns[latestIndex + 1]?.label ?? "Latest";
+
+      return {
+        slot,
+        matchedLabel: row.label,
+        value,
+        period,
+      };
+    }
+  }
+
+  return null;
+}
+
+export function findAllKpiMatches(report: Report): KpiMatch[] {
+  return KPI_SLOT_DEFINITIONS.map((slot) => findKpiMatch(report, slot)).filter(
+    (match): match is KpiMatch => match !== null,
+  );
 }

@@ -65,9 +65,18 @@ export const tableColumnSchema = z.object({
   label: z.string(),
 });
 
+export const rowValueTypeSchema = z.enum([
+  "currency",
+  "count",
+  "percentage",
+  "ratio",
+  "text",
+]);
+
 export const tableRowSchema = z.object({
   label: z.string(),
   values: z.array(z.union([z.string(), z.number(), z.null()])),
+  valueType: rowValueTypeSchema.optional(),
 });
 
 export const financialTableSchema = z.object({
@@ -136,6 +145,7 @@ export type CompanyData = z.infer<typeof companyDataSchema>;
 export type Section = z.infer<typeof sectionSchema>;
 export type FinancialTable = z.infer<typeof financialTableSchema>;
 export type TableRow = z.infer<typeof tableRowSchema>;
+export type RowValueType = z.infer<typeof rowValueTypeSchema>;
 export type Chart = z.infer<typeof chartSchema>;
 export type Dataset = z.infer<typeof datasetSchema>;
 export type ReportMetadata = z.infer<typeof reportMetadataSchema>;

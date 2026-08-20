@@ -73,7 +73,7 @@ export default function ReportGenerator() {
           </h1>
           <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-gray-400">
             Upload a company&apos;s financial document. Get back a structured report
-            — tables, metrics, narrative sections, and charts — as a downloadable PDF.
+            tables, metrics, narrative sections, and charts as a downloadable PDF.
           </p>
         </header>
 
