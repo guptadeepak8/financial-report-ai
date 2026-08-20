@@ -19,7 +19,7 @@ app.use(express.json());
 app.use("/api/v1", routes);
 app.use(errorMiddleware);
 
-app.listen(env.PORT, () => {
+app.listen(env.PORT,"0.0.0.0", () => {
   console.log(
     `Server running on http://localhost:${env.PORT}`,
   );
