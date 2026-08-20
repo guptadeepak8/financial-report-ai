@@ -23,17 +23,12 @@ export function ReportForm({ isSubmitting, onSubmit }: ReportFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-7">
-      <div>
-        <p className="font-mono-label text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)]">
-          Stage 01 · Intake
-        </p>
-        <h2 className="font-display mt-1.5 text-2xl text-[var(--ink)] sm:text-[1.75rem]">
-          Start a new report
-        </h2>
-      </div>
+      <h2 className="font-display text-2xl text-white sm:text-[1.75rem]">
+        Start a new report
+      </h2>
 
       <div>
-        <label htmlFor="companyName" className="mb-2 block text-sm font-semibold text-[var(--ink)]">
+        <label htmlFor="companyName" className="mb-2 block text-sm font-medium text-white">
           Company name
         </label>
         <input
@@ -43,25 +38,23 @@ export function ReportForm({ isSubmitting, onSubmit }: ReportFormProps) {
           onChange={(e) => setCompanyName(e.target.value)}
           placeholder="e.g. LTTS"
           disabled={isSubmitting}
-          className="w-full border-0 border-b-2 border-[var(--rule)] bg-transparent px-0.5 py-2.5 text-[15px] text-[var(--ink)] outline-none transition placeholder:text-[#b3b9c2] focus:border-[var(--ink-navy)] disabled:opacity-50"
+          className="w-full border-0 border-b-2 border-white/20 bg-transparent px-0.5 py-2.5 text-[15px] text-white outline-none transition placeholder:text-gray-600 focus:border-white disabled:opacity-50"
         />
       </div>
 
       <div>
-        <label htmlFor="document" className="mb-2 block text-sm font-semibold text-[var(--ink)]">
+        <label htmlFor="document" className="mb-2 block text-sm font-medium text-white">
           Financial document
         </label>
 
         <label
           htmlFor="document"
-          className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-dashed border-[var(--rule)] bg-[var(--paper)] px-4 py-3.5 transition hover:border-[var(--ink-navy)]"
+          className="flex cursor-pointer items-center justify-between gap-4 rounded-lg border border-dashed border-white/30 bg-white/5 px-4 py-3.5 transition hover:border-white"
         >
-          <span className="text-sm text-[var(--muted)]">
+          <span className="text-sm text-gray-400">
             {file ? "Replace file" : "Choose PDF, CSV, or TXT"}
           </span>
-          <span className="font-mono-label text-[10px] uppercase tracking-wide text-[var(--ink-navy)]">
-            Browse
-          </span>
+          <span className="text-xs font-medium text-white">Browse</span>
         </label>
         <input
           id="document"
@@ -72,14 +65,12 @@ export function ReportForm({ isSubmitting, onSubmit }: ReportFormProps) {
           className="hidden"
         />
 
-        <p className="mt-2 text-xs text-[var(--muted)]">Max file size 20 MB.</p>
+        <p className="mt-2 text-xs text-gray-500">Max file size 20 MB.</p>
 
         {file && (
-          <div className="mt-3 flex items-center justify-between gap-3 border-t border-[var(--rule)] pt-3">
-            <span className="truncate font-mono-label text-xs text-[var(--ink)]">{file.name}</span>
-            <span className="shrink-0 rotate-[-3deg] rounded-sm bg-[var(--stamp-soft)] px-1.5 py-0.5 font-mono-label text-[9px] font-bold uppercase tracking-wide text-[var(--stamp)]">
-              Attached
-            </span>
+          <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/20 pt-3">
+            <span className="truncate text-xs text-white">{file.name}</span>
+            <span className="shrink-0 text-xs text-gray-500">Attached</span>
           </div>
         )}
       </div>
@@ -87,7 +78,7 @@ export function ReportForm({ isSubmitting, onSubmit }: ReportFormProps) {
       <button
         type="submit"
         disabled={isSubmitting || !companyName.trim() || !file}
-        className="mt-2 w-full rounded-lg bg-[var(--ink-navy)] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#0f2438] disabled:cursor-not-allowed disabled:opacity-40"
+        className="mt-2 w-full rounded-lg bg-white px-5 py-3.5 text-sm font-medium text-black transition hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-30"
       >
         {isSubmitting ? "Starting…" : "Generate report"}
       </button>

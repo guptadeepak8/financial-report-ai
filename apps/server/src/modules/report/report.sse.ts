@@ -2,13 +2,14 @@ import type { Request, Response } from "express";
 import { AppError } from "../../utils/app-error";
 import { getReportById } from "./report.service";
 import { subscribeToReport, type ReportStatusEvent } from "./report.events";
+import { getRouteParam } from "../../utils/get-route-param";
 
 function sendEvent(res: Response, event: string, data: unknown): void {
   res.write(`event: ${event}\n` + `data: ${JSON.stringify(data)}\n\n`);
 }
 
 export async function reportEvents(req: Request, res: Response): Promise<void> {
-  const reportId = req.params.id;
+  const reportId = getRouteParam(req.params.id);
   if (!reportId) {
     throw new AppError("Report ID is required", 400, "REPORT_ID_REQUIRED");
   }
@@ -75,7 +76,7 @@ export async function reportEvents(req: Request, res: Response): Promise<void> {
       sendEvent(res, report.status.status, {
         reportId,
         status: report.status.status,
-        errorMessage: report.status.errorMessage ?? null,
+         errorMessage: report.status.status === "failed" ? report.status.message : null,
       });
 
       closed = true;

@@ -333,6 +333,36 @@ rows, columns, sections, and charts.
 
 Do not randomly select different tables between runs.
 
+KEY METRICS / HEADER SNAPSHOT:
+
+In addition to the company information above, populate the following
+summary fields using the MOST RECENT reported annual period found in
+the source (typically the latest FY column in a yearly table):
+
+- revenue
+- netIncome
+- ebitdaMargin
+- ebitMargin (only if EBIT is explicitly reported separately from EBITDA)
+- marketCap
+- enterpriseValue
+- outstandingShares
+- freeFloat
+- dividendYield
+- beta
+- faceValue
+- fiftyTwoWeekHigh
+- fiftyTwoWeekLow
+
+Rules for these fields:
+- If a value already appears as a standalone labeled figure in the
+  source, use it directly.
+- If a value is not standalone but IS present inside an extracted
+  table for the latest reported annual period, use that table value.
+- Do not average, sum, or derive values across periods.
+- Use null only when the value is genuinely absent from the source
+  in any form.
+- State which period each value corresponds to (e.g. "FY 2025").
+
 SOURCE FIDELITY:
 
 The output represents the supplied document only.

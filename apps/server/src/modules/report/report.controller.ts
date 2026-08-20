@@ -10,6 +10,7 @@ import {
   getReportById,
   processReport,
 } from "./report.service";
+import { getRouteParam } from "../../utils/get-route-param";
 
 export async function createReport(req: Request, res: Response): Promise<void> {
   const companyName = req.body.companyName;
@@ -46,7 +47,7 @@ export async function createReport(req: Request, res: Response): Promise<void> {
 }
 
 export async function getReport(req: Request, res: Response): Promise<void> {
-  const reportId = req.params.id;
+  const reportId = getRouteParam(req.params.id);
 
   if (!reportId) {
     throw new AppError("Report ID is required", 400, "REPORT_ID_REQUIRED");
@@ -78,7 +79,7 @@ export async function downloadReport(
   req: Request,
   res: Response,
 ): Promise<void> {
-  const reportId = req.params.id;
+  const reportId = getRouteParam(req.params.id);
 
   if (!reportId) {
     throw new AppError("Report ID is required", 400, "REPORT_ID_REQUIRED");

@@ -45,7 +45,7 @@ export function useReportJob() {
   const applyStatus = useCallback((event: ReportStatusEvent) => {
     setState((current) => ({
       ...current,
-      reportId: event.reportId,
+      reportId: event.reportId ?? current.reportId,
       status: event.status,
       currentStep: event.currentStep,
       errorMessage: event.errorMessage ?? null,

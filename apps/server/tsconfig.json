@@ -15,10 +15,10 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
-
+    "esModuleInterop": true,
     "isolatedModules": true,
     "moduleDetection": "force",
-
+    "allowSyntheticDefaultImports": true,
     "skipLibCheck": true
   },
   "include": ["src"]

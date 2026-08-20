@@ -2,14 +2,12 @@
 @import "tailwindcss";
 
 :root {
-  --paper: #f3f4f1;
+  --paper: #ffffff;
   --surface: #ffffff;
-  --ink: #14171c;
-  --ink-navy: #17324e;
-  --rule: #dadfe3;
-  --muted: #62697a;
-  --stamp: #8b2e2e;
-  --stamp-soft: #f6eae8;
+  --ink: #000000;
+  --ink-navy: #000000;
+  --rule: #e5e5e5;
+  --muted: #737373;
 }
 
 * {
@@ -23,14 +21,8 @@ body {
 }
 
 body {
-  background: var(--paper);
-  color: var(--ink);
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent,
-    transparent 27px,
-    #e4e7e3 28px
-  );
+  background: #ffffff;
+  color: #000000;
 }
 
 .font-display {
