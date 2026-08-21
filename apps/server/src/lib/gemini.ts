@@ -11,7 +11,7 @@ const preferredModels = [
   "gemini-2.5-flash-lite",
   "gemini-3-flash-preview",
 ];
-
+  
 let cachedModel: string | null = null;
 
 export async function getAvailableGeminiModel(): Promise<string> {

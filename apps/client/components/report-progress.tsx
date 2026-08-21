@@ -7,6 +7,7 @@ interface ReportProgressProps {
   currentStep: string;
   isConnected: boolean;
   companyName: string;
+  errorMessage?: string | null;
 }
 
 const steps: Array<{ status: ReportStatus; label: string }> = [
@@ -23,8 +24,9 @@ function Spinner() {
   );
 }
 
-export function ReportProgress({ status, isConnected, companyName }: ReportProgressProps) {
+export function ReportProgress({ status, isConnected, companyName, errorMessage }: ReportProgressProps) {
   const hasStarted = status !== null;
+  const isFailed = status === "failed";
 
   if (!hasStarted) {
     return (
@@ -46,36 +48,51 @@ export function ReportProgress({ status, isConnected, companyName }: ReportProgr
       </h2>
 
       <div className="mt-1 flex items-center gap-1.5">
-        <span className={["h-1.5 w-1.5 rounded-full", isConnected ? "bg-white" : "bg-white/30"].join(" ")} />
-        <span className="text-xs text-gray-500">{isConnected ? "Live" : "Connecting"}</span>
+        <span
+          className={[
+            "h-1.5 w-1.5 rounded-full",
+            isFailed ? "bg-red-500" : isConnected ? "bg-white" : "bg-white/30",
+          ].join(" ")}
+        />
+        <span className="text-xs text-gray-500">
+          {isFailed ? "Failed" : isConnected ? "Live" : "Connecting"}
+        </span>
       </div>
 
-      <div className="mt-6 border-t border-white/20 pt-1">
-        {steps.map((step, index) => {
-          const completed = isJobComplete || currentIndex > index;
-          const current = !isJobComplete && currentIndex === index;
+      {isFailed ? (
+        <div className="mt-6 border-t border-white/20 pt-4">
+          <p className="text-sm text-red-400">
+            {errorMessage ?? "Something went wrong while generating this report."}
+          </p>
+        </div>
+      ) : (
+        <div className="mt-6 border-t border-white/20 pt-1">
+          {steps.map((step, index) => {
+            const completed = isJobComplete || currentIndex > index;
+            const current = !isJobComplete && currentIndex === index;
 
-          return (
-            <div key={step.status} className="flex items-center gap-3 border-b border-white/10 py-3 last:border-b-0">
-              {completed ? (
-                <span className="w-3 shrink-0 text-white">✓</span>
-              ) : current ? (
-                <Spinner />
-              ) : (
-                <span className="w-3 shrink-0" />
-              )}
-              <span
-                className={[
-                  "flex-1 text-sm",
-                  completed ? "text-gray-500" : current ? "font-medium text-white" : "text-gray-600",
-                ].join(" ")}
-              >
-                {step.label}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+            return (
+              <div key={step.status} className="flex items-center gap-3 border-b border-white/10 py-3 last:border-b-0">
+                {completed ? (
+                  <span className="w-3 shrink-0 text-white">✓</span>
+                ) : current ? (
+                  <Spinner />
+                ) : (
+                  <span className="w-3 shrink-0" />
+                )}
+                <span
+                  className={[
+                    "flex-1 text-sm",
+                    completed ? "text-gray-500" : current ? "font-medium text-white" : "text-gray-600",
+                  ].join(" ")}
+                >
+                  {step.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </aside>
   );
 }

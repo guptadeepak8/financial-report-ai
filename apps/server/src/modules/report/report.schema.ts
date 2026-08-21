@@ -77,12 +77,22 @@ export const tableRowSchema = z.object({
   label: z.string(),
   values: z.array(z.union([z.string(), z.number(), z.null()])),
   valueType: rowValueTypeSchema.optional(),
+   perUnit: z.boolean().optional(),
 });
+
+export const tableUnitSchema = z.enum([
+  "absolute",
+  "thousand",
+  "lakh",
+  "million",
+  "crore",
+]);
 
 export const financialTableSchema = z.object({
   id: z.string(),
   title: z.string(),
   category: z.string(),
+  unit: tableUnitSchema.nullable(),
   columns: z.array(tableColumnSchema),
   rows: z.array(tableRowSchema),
 });
@@ -96,6 +106,7 @@ export const datasetSchema = z.object({
 export const chartSchema = z.object({
   id: z.string(),
   title: z.string(),
+  unit: z.string().nullable().optional(),
   type: z.enum(["line", "bar", "pie", "doughnut", "area"]),
   labels: z.array(z.string()),
   datasets: z.array(datasetSchema),
@@ -152,3 +163,4 @@ export type ReportMetadata = z.infer<typeof reportMetadataSchema>;
 export type Report = z.infer<typeof reportSchema>;
 export type AIReport = z.infer<typeof aiReportSchema>;
 export type ReportStatus = z.infer<typeof reportStatusSchema>;
+export type TableUnit = z.infer<typeof tableUnitSchema>;

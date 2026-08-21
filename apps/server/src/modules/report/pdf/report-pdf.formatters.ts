@@ -1,4 +1,4 @@
-import type { Report } from "../report.schema";
+import type { Report, TableUnit } from "../report.schema";
 
 export function escapeHtml(value: unknown): string {
   return String(value ?? "")
@@ -71,7 +71,8 @@ export function isNumericValue(value: unknown): boolean {
 
 export function toNumber(value: unknown): number | null {
   if (typeof value === "number") {
-    return Number.isFinite(value) ? value : null;  }
+    return Number.isFinite(value) ? value : null;
+  }
   if (typeof value !== "string") {
     return null;
   }
@@ -83,17 +84,11 @@ export function normalizeLabel(label: string): string {
   return label.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-export function isPercentColumnLabel(
-  label: string,
-): boolean {
-  return /growth|qoq|yoy|change|margin|percentage|percent|%/i.test(
-    label,
-  );
+export function isPercentColumnLabel(label: string): boolean {
+  return /growth|qoq|yoy|change|margin|percentage|percent|%/i.test(label);
 }
 
-export function isPercentRowLabel(
-  label: string,
-): boolean {
+export function isPercentRowLabel(label: string): boolean {
   return /margin|growth|qoq|yoy|change|attrition|percentage|percent|%/i.test(
     label,
   );
@@ -109,16 +104,11 @@ const PERCENT_TABLE_CATEGORIES = new Set([
   "shareholding",
 ]);
 
-export function isPercentTable(
-  table: Report["tables"][number],
-): boolean {
+export function isPercentTable(table: Report["tables"][number]): boolean {
   if (PERCENT_TABLE_CATEGORIES.has(table.category)) {
     return true;
   }
 
-  // Fallback: if every non-label column header reads as a percent
-  // column (e.g. a custom-category table that is still % based),
-  // treat the table as percent-based.
   const dataColumns = table.columns.slice(1);
 
   if (dataColumns.length === 0) {
@@ -175,19 +165,12 @@ export function companySnapshotHasDisplayableData(
 
 export const SECTION_TYPE_TITLES: Record<string, string> = {
   "executive-summary": "Executive Summary",
-
   "investment-thesis": "Investment Thesis",
-
   "business-overview": "Business Overview",
-
   "management-commentary": "Management Commentary",
-
   outlook: "Outlook",
-
   risk: "Risk Factors",
-
   opportunity: "Opportunities",
-
   valuation: "Valuation",
 };
 
@@ -206,6 +189,99 @@ export function getTableValue(
   const index = getLatestValueIndex(table);
 
   return row.values[index] ?? null;
+}
+
+const UNIT_TO_ABSOLUTE: Record<TableUnit, number> = {
+  absolute: 1,
+  thousand: 1e3,
+  lakh: 1e5,
+  million: 1e6,
+  crore: 1e7,
+};
+
+export function isPerUnitRow(row: {
+  label: string;
+  perUnit?: boolean | undefined;
+}): boolean {
+  if (row.perUnit !== undefined) {
+    return row.perUnit;
+  }
+
+  return /\beps\b|per share|share price|face value|52\s*w|dividend per/i.test(
+    row.label,
+  );
+}
+
+export function formatCurrencyInCrores(
+  value: unknown,
+  unit: TableUnit | null | undefined,
+): string {
+  const num = toNumber(value);
+
+  if (num === null) {
+    return "—";
+  }
+
+  const absolute = num * UNIT_TO_ABSOLUTE[unit ?? "absolute"];
+  const crores = absolute / 1e7;
+
+  if (Math.abs(crores) < 0.01) {
+    return `₹${absolute.toLocaleString("en-IN")}`;
+  }
+
+  return `₹${crores.toLocaleString("en-IN", {
+    maximumFractionDigits: 2,
+  })} Cr`;
+}
+
+export function formatPricePerUnit(value: unknown): string {
+  if (value === null || value === undefined || value === "") {
+    return "—";
+  }
+
+  const num = toNumber(value);
+
+  if (num === null) {
+    return formatValue(value);
+  }
+
+  return `₹${num.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+}
+
+export function formatTableCell(
+  value: unknown,
+  row: { label: string; valueType?: string; perUnit?: boolean },
+  table: { unit?: TableUnit | null },
+  isPercentColumn: boolean,
+  rowFallbackIsPercent: boolean,
+): string {
+  const shouldFormatPercent =
+    isPercentColumn || row.valueType === "percentage" || rowFallbackIsPercent;
+
+  if (shouldFormatPercent) {
+    return formatPercentValue(value);
+  }
+
+  if (row.valueType === "currency") {
+    if (isPerUnitRow(row)) {
+      return formatPricePerUnit(value);
+    }
+
+    if (table.unit) {
+      return formatCurrencyInCrores(value, table.unit);
+    }
+
+    return formatCurrencyValue(value);
+  }
+
+  return formatValue(value);
+}
+
+export function isPerUnitTableRow(row: { label: string; perUnit?: boolean }): boolean {
+  if (row.perUnit !== undefined) return row.perUnit;
+  return /\beps\b|per share|share price|face value|52\s*w|dividend per/i.test(
+    row.label,
+  );
 }
 
 export interface KpiSlotDefinition {
@@ -246,22 +322,13 @@ export const KPI_SLOT_DEFINITIONS: KpiSlotDefinition[] = [
       "financial-highlights",
       "quarterly-results",
     ],
-    aliases: [
-      "net income",
-      "profit after tax",
-      "net profit",
-      "pat",
-    ],
+    aliases: ["net income", "profit after tax", "net profit", "pat"],
   },
   {
     id: "margin",
     label: "Margin",
     format: "percent",
-    preferredCategories: [
-      "income-statement",
-      "ratios",
-      "financial-highlights",
-    ],
+    preferredCategories: ["income-statement", "ratios", "financial-highlights"],
     aliases: [
       "ebit margin",
       "ebit margin (%)",
@@ -281,15 +348,13 @@ export interface KpiMatch {
   matchedLabel: string;
   value: unknown;
   period: string;
+  unit: TableUnit | null;
 }
-
-
 
 export function findKpiMatch(
   report: Report,
   slot: KpiSlotDefinition,
 ): KpiMatch | null {
-  // Search preferred-category tables first, then fall back to all tables.
   const preferredTables = report.tables.filter((table) =>
     slot.preferredCategories.includes(table.category),
   );
@@ -324,6 +389,7 @@ export function findKpiMatch(
         matchedLabel: row.label,
         value,
         period,
+        unit: table.unit ?? null,
       };
     }
   }

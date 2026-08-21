@@ -518,6 +518,20 @@ export const reportPdfStyles = `
     stroke-width: 2;
   }
 
+  .table-unit-note {
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.chart-unit {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+  margin-left: 6px;
+}
+  
+
   /*
    * FOOTER
    */
@@ -562,4 +576,6 @@ export const reportPdfStyles = `
       page-break-inside: avoid;
     }
   }
+
+
 `;

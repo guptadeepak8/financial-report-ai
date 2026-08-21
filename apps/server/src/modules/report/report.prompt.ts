@@ -488,6 +488,46 @@ the type of values it contains:
   "x", interest coverage ratio)
 - "text": non-numeric or label-like values
 
+TABLE UNIT:
+
+Every table must include a "unit" field describing the base
+monetary unit its currency values are expressed in, using one of:
+"absolute", "thousand", "lakh", "million", "crore".
+
+- Read this directly from the table's title/header as presented in
+  the source (e.g. "Rs. Million", "₹ in Lakhs", "(Rs. Crore)").
+- Do not infer or guess a unit from the magnitude of the numbers.
+- If the source table has no stated unit and no currency rows
+  (e.g. a pure headcount or ratio table), use null.
+- If the source table has currency rows but genuinely states no
+  unit anywhere, use "absolute" only if that is unambiguous from
+  context; otherwise use null rather than guessing.
+- This field describes the table as a whole. A single table must
+  not mix multiple stated units.
+
+PER-UNIT ROWS:
+
+Every row with valueType "currency" must include a "perUnit"
+boolean field:
+
+- Set perUnit to true when the row represents a per-share or
+  per-unit price rather than an aggregate amount — for example EPS,
+  face value, dividend per share, or 52-week high/low share price.
+- Set perUnit to false for all aggregate currency rows (Revenue,
+  EBITDA, PAT, Total Assets, Market Cap, etc.) — the ordinary case.
+- Rows that are not valueType "currency" do not need this field.
+- This distinction matters because per-unit values must never be
+  rescaled by the table's unit; only aggregate amounts should be.
+
+CHART UNIT:
+
+Every chart must include a "unit" field: a short display label for
+what its data values are measured in, using the SAME unit basis as
+the underlying table (e.g. "₹ Cr", "%", "MT", "Employees"). Use
+null only if genuinely no unit applies (e.g. a plain count with an
+obvious label). Do not invent a unit that contradicts the source
+table's stated unit.
+
 Rules:
 
 - A row must use exactly ONE valueType across all of its columns.
@@ -502,6 +542,12 @@ Rules:
   valueType; they are handled separately as growth columns.
 - If a table has a Total/Sum row, its valueType must match the
   valueType of the rows it totals.
+- Before returning the output, re-scan every generated numeric and
+  text field one final time for: stray non-ASCII characters,
+  duplicated words, mismatched percentage/currency types, missing
+  or inconsistent table/chart "unit" fields, missing "perUnit" flags
+  on currency rows, and unreconciled totals. Correct any that are
+  found.
 
 This valueType field is required for every row and must be one of
 the five values listed above.

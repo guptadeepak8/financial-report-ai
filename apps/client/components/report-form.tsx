@@ -1,6 +1,6 @@
 "use client";
 
-import { type ChangeEvent, type FormEvent, useState } from "react";
+import { type ChangeEvent, type FormEvent, useRef, useState } from "react";
 
 interface ReportFormProps {
   isSubmitting: boolean;
@@ -10,9 +10,17 @@ interface ReportFormProps {
 export function ReportForm({ isSubmitting, onSubmit }: ReportFormProps) {
   const [companyName, setCompanyName] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     setFile(event.target.files?.[0] ?? null);
+  }
+
+  function handleRemoveFile() {
+    setFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""; // lets the same file be re-picked later
+    }
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -58,6 +66,7 @@ export function ReportForm({ isSubmitting, onSubmit }: ReportFormProps) {
         </label>
         <input
           id="document"
+          ref={fileInputRef}
           type="file"
           accept=".pdf,.csv,.txt"
           onChange={handleFileChange}
@@ -70,7 +79,14 @@ export function ReportForm({ isSubmitting, onSubmit }: ReportFormProps) {
         {file && (
           <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/20 pt-3">
             <span className="truncate text-xs text-white">{file.name}</span>
-            <span className="shrink-0 text-xs text-gray-500">Attached</span>
+            <button
+              type="button"
+              onClick={handleRemoveFile}
+              disabled={isSubmitting}
+              className="shrink-0 text-xs text-gray-500 underline-offset-2 hover:text-white hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Remove
+            </button>
           </div>
         )}
       </div>

@@ -6,15 +6,15 @@ import {
   escapeHtml,
   formatValue,
   formatPercentValue,
-  formatCurrencyValue,
-  normalizeLabel,
   isPercentColumnLabel,
   isPercentRowLabel,
   isPercentTable,
-  getLatestValueIndex,
   companySnapshotHasDisplayableData,
   SECTION_TYPE_TITLES,
   findAllKpiMatches,
+  isPerUnitRow,
+  formatCurrencyInCrores,
+  formatPricePerUnit,
 } from "./report-pdf.formatters";
 import { getReportCharts } from "./report-pdf.chart";
 
@@ -154,7 +154,7 @@ function renderKpis(report: Report): string {
       const formattedValue =
         match.slot.format === "percent"
           ? formatPercentValue(match.value)
-          : formatCurrencyValue(match.value);
+          : formatCurrencyInCrores(match.value, match.unit);
 
       return `
         <div class="kpi-card">
@@ -164,11 +164,6 @@ function renderKpis(report: Report): string {
 
           <small>
             ${formatValue(match.period)}
-            ${
-              match.slot.format === "currency" && report.company.currency
-                ? ` · ${formatValue(report.company.currency)}`
-                : ""
-            }
           </small>
         </div>
       `;
@@ -241,16 +236,17 @@ function renderCompanySnapshot(report: Report, sectionNumber: number): string {
     return "";
   }
 
-  const metrics = [
-    ["Market Cap", data.marketCap],
-    ["Enterprise Value", data.enterpriseValue],
-    ["Outstanding Shares", data.outstandingShares],
-    ["Free Float", data.freeFloat],
-    ["Dividend Yield", data.dividendYield],
-    ["Beta", data.beta],
-    ["Face Value", data.faceValue],
-    ["52W High", data.fiftyTwoWeekHigh],
-    ["52W Low", data.fiftyTwoWeekLow],
+
+  const metrics: Array<[string, number | null, "crore" | "count" | "percent" | "price" | "plain"]> = [
+    ["Market Cap", data.marketCap, "crore"],
+    ["Enterprise Value", data.enterpriseValue, "crore"],
+    ["Outstanding Shares", data.outstandingShares, "count"],
+    ["Free Float %", data.freeFloat, "percent"],
+    ["Dividend Yield", data.dividendYield, "percent"],
+    ["Beta", data.beta, "plain"],
+    ["Face Value", data.faceValue, "price"],
+    ["52W High", data.fiftyTwoWeekHigh, "price"],
+    ["52W Low", data.fiftyTwoWeekLow, "price"],
   ];
 
   return `
@@ -259,19 +255,41 @@ function renderCompanySnapshot(report: Report, sectionNumber: number): string {
 
       <div class="metrics-grid">
         ${metrics
-          .map(
-            ([label, value]) => `
+          .map(([label, value, kind]) => {
+            let display: string;
+
+            switch (kind) {
+              case "crore":
+                display = formatCurrencyInCrores(value, "absolute");
+                break;
+              case "percent":
+                display = formatPercentValue(value);
+                break;
+              case "price":
+                display = formatPricePerUnit(value);
+                break;
+              case "count":
+                display =
+                  value === null
+                    ? "—"
+                    : value.toLocaleString("en-IN");
+                break;
+              default:
+                display = formatValue(value);
+            }
+
+            return `
               <div class="metric">
                 <span>
                   ${escapeHtml(label)}
                 </span>
 
                 <strong>
-                  ${formatValue(value)}
+                  ${display}
                 </strong>
               </div>
-            `,
-          )
+            `;
+          })
           .join("")}
       </div>
     </section>
@@ -343,10 +361,30 @@ function renderTable(
     .slice(1)
     .map((column) => isPercentColumnLabel(column.label));
 
+  // NEW: surface the table's declared unit next to its title, e.g.
+  // "Standalone Quarterly Results (₹ Million)", so readers always
+  // know what raw unit the source used even though cells are
+  // rendered in crores.
+  const unitLabel = table.unit
+    ? {
+        absolute: "Absolute ₹",
+        thousand: "₹ Thousand",
+        lakh: "₹ Lakh",
+        million: "₹ Million",
+        crore: "₹ Crore",
+      }[table.unit]
+    : null;
+
   return `
     <section class="section table-section">
 
       ${renderSectionTitle(sectionNumber, table.title)}
+
+      ${
+        unitLabel
+          ? `<div class="table-unit-note">Source unit: ${escapeHtml(unitLabel)} · displayed in ₹ Cr</div>`
+          : ""
+      }
 
       <div class="table-wrapper">
         <table class="financial-table">
@@ -371,9 +409,7 @@ function renderTable(
             ${table.rows
               .map((row) => {
                 const values = Array.from(
-                  {
-                    length: valueColumnCount,
-                  },
+                  { length: valueColumnCount },
                   (_, index) => row.values[index] ?? null,
                 );
 
@@ -395,13 +431,21 @@ function renderTable(
                             row.valueType === "percentage" ||
                             rowFallbackIsPercent;
 
+                          let display: string;
+
+                          if (shouldFormatPercent) {
+                            display = formatPercentValue(value);
+                          } else if (row.valueType === "currency") {
+                            display = isPerUnitRow(row)
+                              ? formatPricePerUnit(value)
+                              : formatCurrencyInCrores(value, table.unit);
+                          } else {
+                            display = formatValue(value);
+                          }
+
                           return `
                               <td class="numeric-cell">
-                                ${
-                                  shouldFormatPercent
-                                    ? formatPercentValue(value)
-                                    : formatValue(value)
-                                }
+                                ${display}
                               </td>
                             `;
                         })
@@ -418,6 +462,8 @@ function renderTable(
     </section>
   `;
 }
+
+
 
 function renderBarChart(chart: Report["charts"][number]): string {
   const dataset = chart.datasets[0];
@@ -492,8 +538,9 @@ function renderBarChart(chart: Report["charts"][number]): string {
   return `
     <div class="chart-card">
 
-      <div class="chart-card-title">
+       <div class="chart-card-title">
         ${formatValue(chart.title)}
+        ${chart.unit ? `<span class="chart-unit">(${escapeHtml(chart.unit)})</span>` : ""}
       </div>
 
       <svg
